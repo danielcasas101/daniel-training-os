@@ -57,3 +57,11 @@ Local storage provides an offline-friendly fallback. After sign-in, the same sta
 ## Deployment
 
 Deploy through Vercel after connecting the GitHub repository. Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the Vercel project, then verify email sign-in, refresh persistence, and mobile navigation.
+
+After deployment, verify every production route from the command line:
+
+```bash
+BASE_URL=https://your-app.vercel.app pnpm smoke
+```
+
+GitHub Actions runs lint, type-checking, tests, and the production build for every pull request and push to `main`.

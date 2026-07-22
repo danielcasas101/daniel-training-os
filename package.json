@@ -2,6 +2,7 @@
   "name": "daniel-training-os",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.10.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +10,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
