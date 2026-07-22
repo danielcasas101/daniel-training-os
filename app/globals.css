@@ -1,0 +1,227 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+
+  /* Category color identities — used as accents per training domain.
+     Each has a soft tint (-soft) for backgrounds and an ink tone for text. */
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-lavender: var(--lavender);
+  --color-lavender-soft: var(--lavender-soft);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-aqua: var(--aqua);
+  --color-aqua-soft: var(--aqua-soft);
+  --color-sunny: var(--sunny);
+  --color-sunny-soft: var(--sunny-soft);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Warm light theme: cream surfaces, navy ink, sky-blue primary, and a set of
+   playful category accents (coral, mint, lavender, aqua, sunny). All tokens
+   centralized here so the whole app re-themes from one place. */
+:root {
+  --background: oklch(0.985 0.012 85);
+  --foreground: oklch(0.27 0.03 260);
+  --card: oklch(1 0.004 85);
+  --card-foreground: oklch(0.27 0.03 260);
+  --popover: oklch(1 0.004 85);
+  --popover-foreground: oklch(0.27 0.03 260);
+
+  --primary: oklch(0.64 0.13 236);
+  --primary-foreground: oklch(0.99 0.01 236);
+  --secondary: oklch(0.955 0.016 85);
+  --secondary-foreground: oklch(0.32 0.03 260);
+  --muted: oklch(0.955 0.014 85);
+  --muted-foreground: oklch(0.52 0.025 260);
+  --accent: oklch(0.93 0.035 236);
+  --accent-foreground: oklch(0.3 0.05 250);
+
+  --destructive: oklch(0.64 0.19 25);
+  --success: oklch(0.68 0.13 162);
+  --success-foreground: oklch(0.99 0.01 162);
+  --warning: oklch(0.74 0.13 70);
+  --warning-foreground: oklch(0.28 0.05 70);
+
+  --border: oklch(0.9 0.014 85);
+  --input: oklch(0.9 0.014 85);
+  --ring: oklch(0.64 0.13 236);
+
+  /* Category accents */
+  --coral: oklch(0.66 0.16 30);
+  --coral-soft: oklch(0.95 0.045 35);
+  --sky: oklch(0.64 0.13 236);
+  --sky-soft: oklch(0.95 0.04 236);
+  --lavender: oklch(0.62 0.11 290);
+  --lavender-soft: oklch(0.95 0.035 290);
+  --mint: oklch(0.66 0.12 162);
+  --mint-soft: oklch(0.95 0.045 162);
+  --aqua: oklch(0.66 0.11 200);
+  --aqua-soft: oklch(0.95 0.04 200);
+  --sunny: oklch(0.76 0.13 80);
+  --sunny-soft: oklch(0.96 0.05 90);
+
+  /* Charts map to the category accents for a cohesive, colorful feel */
+  --chart-1: var(--sky);
+  --chart-2: var(--coral);
+  --chart-3: var(--mint);
+  --chart-4: var(--sunny);
+  --chart-5: var(--lavender);
+
+  --radius: 0.85rem;
+
+  --sidebar: oklch(0.97 0.014 85);
+  --sidebar-foreground: oklch(0.27 0.03 260);
+  --sidebar-primary: oklch(0.64 0.13 236);
+  --sidebar-primary-foreground: oklch(0.99 0.01 236);
+  --sidebar-accent: oklch(0.93 0.035 236);
+  --sidebar-accent-foreground: oklch(0.3 0.05 250);
+  --sidebar-border: oklch(0.9 0.014 85);
+  --sidebar-ring: oklch(0.64 0.13 236);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Micro-interactions. Subtle, efficient, and fully disabled under
+   prefers-reduced-motion. Keep these small — never overanimate.
+--------------------------------------------------------------------------- */
+@layer utilities {
+  @keyframes v0-pop-check {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.18);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes v0-card-settle {
+    0% {
+      transform: scale(0.99);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes v0-rise {
+    0% {
+      transform: translateY(6px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes v0-celebrate {
+    0% {
+      transform: translateY(8px) scale(0.96);
+      opacity: 0;
+    }
+    50% {
+      transform: translateY(-2px) scale(1.02);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-pop-check {
+    animation: v0-pop-check 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .animate-card-settle {
+    animation: v0-card-settle 0.25s ease-out;
+  }
+  .animate-rise {
+    animation: v0-rise 0.3s ease-out both;
+  }
+  .animate-celebrate {
+    animation: v0-celebrate 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+
+  /* Smooth, consistent progress-bar fills */
+  .progress-fill {
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .progress-fill {
+    transition: none;
+  }
+}
