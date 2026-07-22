@@ -5,6 +5,7 @@ import type {
   ModificationReason,
   ModificationScope,
   ModificationStrategy,
+  PlanModification,
   PlanItemChange,
   Workout,
 } from '@/lib/types'
@@ -40,13 +41,7 @@ const STRATEGIES: { value: ModificationStrategy; label: string; desc: string }[]
   { value: 'manual', label: 'Edit manually', desc: 'You choose what changes.' },
 ]
 
-export interface ModificationResult {
-  reason: ModificationReason
-  strategy: ModificationStrategy
-  scope: ModificationScope
-  changes: PlanItemChange[]
-  note: string
-}
+export type ModificationResult = PlanModification
 
 export function ModifyTodaySheet({
   workout,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Profile, UserPreferences, SimpleDietCheckin } from '@/lib/types'
+import type { Profile, UserPreferences } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 import { Check, Droplet, Dumbbell, Utensils, Waves } from 'lucide-react'
+import { trainingStore } from '@/lib/training-store'
+import { localDateKey } from '@/lib/date'
 
 // Daniel ~168 lb -> ~0.9-1g/lb protein target.
 const PROTEIN_TARGET_G = 160
@@ -64,18 +66,21 @@ export function DietClient({
   const [saved, setSaved] = useState(false)
 
   function submit() {
-    const today = new Date().toISOString().slice(0, 10)
-    const entry: SimpleDietCheckin = {
-      id: `d-${Date.now()}`,
+    const today = localDateKey()
+    const proteinValue = protein ?? 'okay'
+    const enoughValue = ateEnough ?? 'unsure'
+    const hydrationValue = hydration ?? 'okay'
+    trainingStore.saveNutritionCheckin({
+      id: `nutrition-${today}`,
       date: today,
-      protein: (protein ?? 'okay') as SimpleDietCheckin['protein'],
-      ateEnough: (ateEnough ?? 'unsure') as SimpleDietCheckin['ateEnough'],
-      hydration: (hydration ?? 'okay') as SimpleDietCheckin['hydration'],
-      bodyweightLb: bw ? parseFloat(bw) : undefined,
-      note: note.trim() || undefined,
-    }
-    // Local-only mock; structured for future persistence.
-    void entry
+      bodyweightLb: bw ? Number(bw) : undefined,
+      protein: proteinValue === 'good' ? 'high' : proteinValue === 'okay' ? 'adequate' : 'low',
+      meals: enoughValue === 'yes' ? 4 : enoughValue === 'unsure' ? 3 : 2,
+      hunger: enoughValue === 'yes' ? 3 : enoughValue === 'unsure' ? 2 : 1,
+      energy: 3,
+      hydration: hydrationValue === 'good' ? 5 : hydrationValue === 'okay' ? 3 : 1,
+      notes: note.trim() || undefined,
+    })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

@@ -19,6 +19,9 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
+import { localDateKey } from '@/lib/date'
 
 export function FlexibilityClient({
   items,
@@ -34,6 +37,8 @@ export function FlexibilityClient({
   const [milestone, setMilestone] = useState('')
   const [saved, setSaved] = useState(false)
   const { show } = useExerciseDetail()
+  const trainingState = useTrainingState()
+  const today = localDateKey()
 
   const active = routines.find((r) => r.id === activeId)!
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
@@ -46,6 +51,12 @@ export function FlexibilityClient({
         items={playing.itemIds.map((id) => itemMap.get(id)).filter(Boolean) as MobilityItem[]}
         onExit={() => {
           setDoneToday((d) => ({ ...d, [playing.id]: true }))
+          trainingStore.saveFlexibilitySession({
+            id: `${today}:${playing.id}`,
+            date: today,
+            routine: playing.name,
+            durationMinutes: Number.parseInt(playing.duration, 10) || 0,
+          })
           setPlaying(null)
         }}
       />
@@ -98,7 +109,10 @@ export function FlexibilityClient({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-medium">{r.name}</p>
-                  {doneToday[r.id] && (
+                  {(doneToday[r.id] ||
+                    trainingState.flexibilitySessions.some(
+                      (session) => session.id === `${today}:${r.id}`,
+                    )) && (
                     <Check className="size-3.5 shrink-0 text-mint" />
                   )}
                 </div>
@@ -163,6 +177,14 @@ export function FlexibilityClient({
             variant="outline"
             className="w-full sm:w-fit"
             onClick={() => {
+              trainingStore.saveFlexibilitySession({
+                id: `${today}:${active.id}`,
+                date: today,
+                routine: active.name,
+                durationMinutes: Number.parseInt(active.duration, 10) || 0,
+                milestone: milestone.trim() || undefined,
+                note: note.trim() || undefined,
+              })
               setSaved(true)
               setTimeout(() => setSaved(false), 2000)
             }}

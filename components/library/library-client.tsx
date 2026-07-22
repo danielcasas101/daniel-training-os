@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
 import {
   Search,
   Video,
@@ -31,7 +33,8 @@ export function LibraryClient({ resources }: { resources: GuideResource[] }) {
   const [query, setQuery] = useState('')
   const [skill, setSkill] = useState('all')
   const [savedOnly, setSavedOnly] = useState(false)
-  const [items, setItems] = useState<GuideResource[]>(resources)
+  const trainingState = useTrainingState()
+  const items = trainingState.resources.length ? trainingState.resources : resources
 
   const skillsList = useMemo(
     () => ['all', ...Array.from(new Set(resources.map((r) => r.skill)))],
@@ -55,13 +58,17 @@ export function LibraryClient({ resources }: { resources: GuideResource[] }) {
   }, [items, query, skill, savedOnly])
 
   function toggleSaved(id: string) {
-    setItems((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, saved: !r.saved } : r)),
+    trainingStore.saveResources(
+      items.map((resource) =>
+        resource.id === id ? { ...resource, saved: !resource.saved } : resource,
+      ),
     )
   }
   function toggleCompleted(id: string) {
-    setItems((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r)),
+    trainingStore.saveResources(
+      items.map((resource) =>
+        resource.id === id ? { ...resource, completed: !resource.completed } : resource,
+      ),
     )
   }
 
@@ -163,15 +170,17 @@ export function LibraryClient({ resources }: { resources: GuideResource[] }) {
                   />
                   {r.completed ? 'Completed' : 'Mark done'}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  nativeButton={false}
-                  render={<a href={r.url} target="_blank" rel="noopener noreferrer" />}
-                >
-                  Open
-                  <ExternalLink className="size-3.5" />
-                </Button>
+                {!r.url.includes('example.com') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    nativeButton={false}
+                    render={<a href={r.url} target="_blank" rel="noopener noreferrer" />}
+                  >
+                    Open
+                    <ExternalLink className="size-3.5" />
+                  </Button>
+                )}
               </div>
             </Card>
           )

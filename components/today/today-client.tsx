@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import type {
-  SessionCompletion,
   Workout,
   WorkoutExercise,
 } from '@/lib/types'
@@ -17,6 +16,11 @@ import { SECTION_LABELS, formatDateLong, intensityBg } from '@/lib/format'
 import { sectionAccent } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 import { Clock, Flame, Play, PartyPopper, SlidersHorizontal, Target } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
+import { createProgressionUpdate } from '@/lib/progression/catalog'
+import { applyModificationToPlan, applyModificationToWorkout } from '@/lib/planning'
+import { mondayFirstWeekday, startOfWeekKey } from '@/lib/date'
 
 const SECTION_ORDER = [
   'warmup',
@@ -41,13 +45,22 @@ export function TodayClient({
   initialWorkout: Workout
   blockName: string
 }) {
-  const [workout, setWorkout] = useState(initialWorkout)
+  const trainingState = useTrainingState()
+  const dailyRecord = trainingState.dailyPlans[initialWorkout.date]
+  const workout = dailyRecord?.working ?? initialWorkout
   const [compact, setCompact] = useState(false)
   const [detailed, setDetailed] = useState(false)
   const [modifyOpen, setModifyOpen] = useState(false)
-  const [modification, setModification] = useState<ModificationResult | null>(null)
-  const [completion, setCompletion] = useState<SessionCompletion | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
+  const modification = dailyRecord?.modification ?? null
+  const completion = dailyRecord?.completion ?? null
+
+  const setWorkout = (
+    updater: Workout | ((current: Workout) => Workout),
+  ) => {
+    const next = typeof updater === 'function' ? updater(workout) : updater
+    trainingStore.updateWorkingWorkout(initialWorkout.date, initialWorkout, next)
+  }
 
   const showFlash = (msg: string) => {
     setFlash(msg)
@@ -229,6 +242,9 @@ export function TodayClient({
                     exercise={ex}
                     detailed={detailed}
                     onChange={updateExercise}
+                    progression={trainingState.progressionUpdates.find(
+                      (update) => update.exerciseId === ex.id || update.exerciseName === ex.name,
+                    )}
                   />
                 ))}
               </div>
@@ -241,12 +257,24 @@ export function TodayClient({
       <CompletionCard
         saved={!!completion}
         onSave={(c) => {
-          setCompletion(c)
-          setWorkout((w) => ({ ...w, status: 'completed' }))
+          const effective = applyModificationToWorkout(workout, modification ?? undefined)
+          const updates = effective.exercises
+            .map((exercise) =>
+              createProgressionUpdate(
+                exercise,
+                effective.date,
+                c,
+                trainingState.progressionUpdates,
+              ),
+            )
+            .filter((update): update is NonNullable<typeof update> => update != null)
+          trainingStore.completeWorkout(initialWorkout, effective, c, updates)
           showFlash(
             c.outcome === 'skipped'
               ? 'Logged as skipped'
-              : 'Session saved. Nice work.',
+              : updates.length
+                ? `Session saved · ${updates.length} target${updates.length === 1 ? '' : 's'} updated`
+                : 'Session saved. Nice work.',
           )
         }}
       />
@@ -262,11 +290,30 @@ export function TodayClient({
         onOpenChange={setModifyOpen}
         modified={!!modification}
         onApply={(result) => {
-          setModification(result)
+          trainingStore.saveModification(
+            workout.date,
+            dailyRecord?.original ?? initialWorkout,
+            workout,
+            result,
+          )
+          if (result.scope !== 'today') {
+            const date = new Date(`${workout.date}T12:00:00`)
+            const weekday = mondayFirstWeekday(date)
+            const updatedPlan = applyModificationToPlan(
+              trainingState.recurringPlan,
+              weekday,
+              result,
+            )
+            if (result.scope === 'this_week') {
+              trainingStore.saveWeekOverride(startOfWeekKey(date), updatedPlan)
+            } else {
+              trainingStore.saveRecurringPlan(updatedPlan)
+            }
+          }
           showFlash(`Plan updated · ${scopeLabel(result.scope)}`)
         }}
         onRevert={() => {
-          setModification(null)
+          trainingStore.revertDailyPlan(workout.date)
           showFlash('Reverted to original plan')
         }}
       />

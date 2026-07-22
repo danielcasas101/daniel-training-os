@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/shell/app-shell'
 import { PlanClient } from '@/components/plan/plan-client'
 import { currentBlock, weekPlan } from '@/lib/seed-data'
+import { mondayFirstWeekday } from '@/lib/date'
 
 export default function PlanPage() {
   return (
@@ -12,7 +13,7 @@ export default function PlanPage() {
       <PlanClient
         initialPlan={weekPlan}
         block={currentBlock}
-        todayWeekday={new Date().getDay()}
+        todayWeekday={mondayFirstWeekday()}
       />
     </>
   )

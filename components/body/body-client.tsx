@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { TrendChart } from '@/components/charts/trend-chart'
 import { cn } from '@/lib/utils'
 import { Check, Plus, Scale, TrendingUp } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
+import { localDateKey } from '@/lib/date'
 
 function shortDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -21,7 +24,8 @@ export function BodyClient({
   profile: Profile
   logs: BodyweightLog[]
 }) {
-  const [entries, setEntries] = useState<BodyweightLog[]>(logs)
+  const trainingState = useTrainingState()
+  const entries = trainingState.bodyweight.length ? trainingState.bodyweight : logs
   const [weight, setWeight] = useState('')
   const [adding, setAdding] = useState(false)
   const [note, setNote] = useState('')
@@ -30,11 +34,8 @@ export function BodyClient({
   function addEntry() {
     const w = parseFloat(weight)
     if (!w || Number.isNaN(w)) return
-    const today = new Date().toISOString().slice(0, 10)
-    setEntries((prev) => [
-      ...prev.filter((e) => e.date !== today),
-      { id: `bw-${Date.now()}`, date: today, weightLb: w },
-    ])
+    const today = localDateKey()
+    trainingStore.saveBodyweight({ id: `bw-${today}`, date: today, weightLb: w })
     setWeight('')
     setAdding(false)
   }

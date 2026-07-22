@@ -39,13 +39,19 @@ export function CoachClient({ conversation }: { conversation: CoachConversation 
   const [input, setInput] = useState('')
   const [review, setReview] = useState<ReviewState>({ show: false, edits: [] })
   const scrollRef = useRef<HTMLDivElement>(null)
+  const messageCounter = useRef(conversation.messages.length)
+
+  function nextMessageId(suffix = '') {
+    messageCounter.current += 1
+    return `cm-local-${messageCounter.current}${suffix}`
+  }
 
   function pushCoachReply(userText: string) {
     const reply: CoachMessage = {
-      id: `cm-${Date.now()}-c`,
+      id: nextMessageId('-coach'),
       role: 'coach',
       content:
-        'Based on your recent workouts, pain logs, and current plan, here is what I see. Review the proposed changes below and approve the ones you want applied to your plan.',
+        `I reviewed “${userText}” against the current sample workout, pain logs, and plan. Review the proposed changes below and approve only the ones you want applied.`,
       createdAt: new Date().toISOString(),
     }
     setMessages((prev) => [...prev, reply])
@@ -64,7 +70,7 @@ export function CoachClient({ conversation }: { conversation: CoachConversation 
     const value = text.trim()
     if (!value) return
     const userMsg: CoachMessage = {
-      id: `cm-${Date.now()}`,
+      id: nextMessageId(),
       role: 'user',
       content: value,
       createdAt: new Date().toISOString(),

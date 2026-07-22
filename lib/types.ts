@@ -113,6 +113,8 @@ export interface WorkoutExercise {
   cue?: string
   notes?: string
   rpe?: number
+  formQuality?: 'clean' | 'mixed' | 'poor'
+  discomfort?: 'none' | 'mild' | 'notable'
   done: boolean
   sets: ExerciseSet[]
 }
@@ -367,4 +369,12 @@ export interface PlanItemChange {
   updated: string
   reason: string
   removed?: boolean
+}
+
+export interface PlanModification {
+  reason: ModificationReason
+  strategy: ModificationStrategy
+  scope: ModificationScope
+  changes: PlanItemChange[]
+  note: string
 }

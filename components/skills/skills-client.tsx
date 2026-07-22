@@ -25,6 +25,9 @@ import {
   Target,
   Trophy,
 } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
+import type { ProgressionUpdate } from '@/lib/training-state'
 
 export function SkillsClient({
   skills,
@@ -33,9 +36,44 @@ export function SkillsClient({
   skills: SkillDefinition[]
   states: UserSkillState[]
 }) {
+  const trainingState = useTrainingState()
   const active = skills.filter((s) => s.active)
   const optional = skills.filter((s) => !s.active)
   const stateFor = (id: string) => states.find((s) => s.skillId === id)
+  const updateFor = (skill: SkillDefinition) => {
+    const pattern = /planche/i.test(skill.name)
+      ? /planche/i
+      : /handstand/i.test(skill.name)
+        ? /handstand|kick.?up/i
+        : /press|compression/i.test(skill.name)
+          ? /press|compression|pike/i
+          : /physique|strength/i.test(skill.name)
+            ? /bench|pull|dip|row|dumbbell|cable/i
+            : /swim/i
+    return trainingState.progressionUpdates.find((update) => pattern.test(update.exerciseName))
+  }
+
+  const addToPlan = (skill: SkillDefinition) => {
+    const plan = trainingState.recurringPlan.map((day) => {
+      if (day.weekday !== 5) return day
+      const name = `${skill.name} practice`
+      if (day.exercises.some((exercise) => exercise.name === name)) return day
+      return {
+        ...day,
+        exercises: [
+          ...day.exercises,
+          {
+            id: `optional-${skill.id}`,
+            name,
+            target: '15 min',
+            section: 'primary' as const,
+            cue: 'Keep optional work submaximal so it does not dilute primary goals.',
+          },
+        ],
+      }
+    })
+    trainingStore.saveRecurringPlan(plan)
+  }
 
   return (
     <Tabs defaultValue="active">
@@ -46,7 +84,13 @@ export function SkillsClient({
 
       <TabsContent value="active" className="mt-4 flex flex-col gap-4">
         {active.map((skill) => (
-          <SkillCard key={skill.id} skill={skill} state={stateFor(skill.id)} />
+          <SkillCard
+            key={skill.id}
+            skill={skill}
+            state={stateFor(skill.id)}
+            progression={updateFor(skill)}
+            onAdd={() => addToPlan(skill)}
+          />
         ))}
       </TabsContent>
 
@@ -67,9 +111,13 @@ export function SkillsClient({
 function SkillCard({
   skill,
   state,
+  progression,
+  onAdd,
 }: {
   skill: SkillDefinition
   state?: UserSkillState
+  progression?: ProgressionUpdate
+  onAdd: () => void
 }) {
   const accent = accentForCategory(skill.category, skill.name)
   const currentStage = skill.stages.find((s) => s.id === state?.currentStageId)
@@ -113,8 +161,9 @@ function SkillCard({
       </div>
 
       <div className="flex flex-col gap-3 p-4">
-        <div className="grid grid-cols-3 gap-3 text-xs">
-          <Field label="Best result" value={state?.bestResult ?? '—'} />
+        <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+          <Field label="Last result" value={progression?.lastResult ?? state?.bestResult ?? '—'} />
+          <Field label="Today target" value={progression?.nextTarget ?? state?.nextMilestone ?? '—'} />
           <Field
             label="Frequency"
             value={`${skill.currentWeeklyFrequency}× / ${skill.recommendedFrequency}`}
@@ -129,6 +178,15 @@ function SkillCard({
               <span className="font-semibold">Unlock next: </span>
               {state.nextMilestone}
             </span>
+          </div>
+        )}
+
+        {progression && (
+          <div className="rounded-lg border border-border bg-muted/40 p-2.5 text-xs">
+            <p className="font-semibold capitalize">
+              {progression.status.replaceAll('_', ' ')}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">{progression.reason}</p>
           </div>
         )}
 
@@ -152,7 +210,7 @@ function SkillCard({
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={onAdd}>
             <Plus className="size-3.5" />
             Add to plan
           </Button>

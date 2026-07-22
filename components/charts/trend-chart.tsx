@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -22,7 +21,14 @@ interface TrendPoint {
 const AXIS = 'oklch(0.68 0.008 264)'
 const GRID = 'oklch(1 0 0 / 8%)'
 
-function ChartTooltip({ active, payload, label, unit }: any) {
+interface ChartTooltipProps {
+  active?: boolean
+  payload?: Array<{ value?: number | string }>
+  label?: string
+  unit?: string
+}
+
+function ChartTooltip({ active, payload, label, unit }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs shadow-md">
@@ -53,9 +59,6 @@ export function TrendChart({
   const latest = data[data.length - 1]?.value
   const first = data[0]?.value
   const delta = latest != null && first != null ? latest - first : 0
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
   const values = data.map((d) => d.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -86,8 +89,12 @@ export function TrendChart({
         </div>
       </div>
       <div className="h-32 w-full">
-        {mounted ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            initialDimension={{ width: 640, height: 128 }}
+          >
             {area ? (
             <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
@@ -126,7 +133,6 @@ export function TrendChart({
             </LineChart>
           )}
           </ResponsiveContainer>
-        ) : null}
       </div>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </Card>

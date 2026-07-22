@@ -7,19 +7,24 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useExerciseDetail } from '@/components/exercise-detail-provider'
 import { ArrowRight, Check, Info, MessageSquarePlus } from 'lucide-react'
+import type { ProgressionUpdate } from '@/lib/training-state'
+import { movementPrescription } from '@/lib/progression/catalog'
 
 export function ExerciseRow({
   exercise,
   detailed,
   onChange,
+  progression,
 }: {
   exercise: WorkoutExercise
   detailed: boolean
   onChange: (next: WorkoutExercise) => void
+  progression?: ProgressionUpdate
 }) {
   const { show } = useExerciseDetail()
   const [showNote, setShowNote] = useState(false)
   const [showResult, setShowResult] = useState(false)
+  const prescription = movementPrescription(exercise)
 
   const toggleComplete = () =>
     onChange({
@@ -70,15 +75,28 @@ export function ExerciseRow({
       </div>
 
       {/* Progression cue: last → today */}
-      {!detailed && exercise.previousResult && (
+      {!detailed && (exercise.previousResult || progression) && (
         <div className="mx-2.5 mb-2 flex items-center gap-2 rounded-lg bg-muted/60 px-2.5 py-1.5 text-xs">
           <span className="text-muted-foreground">
-            Last <span className="font-medium text-foreground">{exercise.previousResult}</span>
+            Last <span className="font-medium text-foreground">{progression?.lastResult ?? exercise.previousResult}</span>
           </span>
           <ArrowRight className="size-3 text-muted-foreground" />
           <span className="text-muted-foreground">
-            Target <span className="font-medium text-sky">{exercise.target}</span>
+            Today <span className="font-medium text-sky">{progression?.nextTarget ?? exercise.target}</span>
           </span>
+        </div>
+      )}
+
+      {exercise.section === 'primary' && (
+        <div className="mx-2.5 mb-2 grid gap-1 rounded-lg border border-border/70 bg-background/50 px-2.5 py-2 text-[11px] sm:grid-cols-2">
+          <p>
+            <span className="font-semibold text-foreground">Progress when: </span>
+            <span className="text-muted-foreground">{prescription.progressWhen}</span>
+          </p>
+          <p>
+            <span className="font-semibold text-foreground">Next unlock: </span>
+            <span className="text-muted-foreground">{progression?.nextVariation ?? prescription.nextUnlock}</span>
+          </p>
         </div>
       )}
 
@@ -172,11 +190,24 @@ export function ExerciseRow({
               }
             />
             <span className="text-xs text-muted-foreground">Form</span>
-            <Input
-              placeholder="-"
-              className="h-8 w-20 text-sm"
-              onChange={() => {}}
-            />
+            <select
+              value={exercise.formQuality ?? ''}
+              aria-label={`${exercise.name} form quality`}
+              className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+              onChange={(event) =>
+                onChange({
+                  ...exercise,
+                  formQuality: event.target.value
+                    ? (event.target.value as WorkoutExercise['formQuality'])
+                    : undefined,
+                })
+              }
+            >
+              <option value="">Optional</option>
+              <option value="clean">Clean</option>
+              <option value="mixed">Mixed</option>
+              <option value="poor">Poor</option>
+            </select>
           </div>
         </div>
       )}

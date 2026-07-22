@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AppShell } from '@/components/shell/app-shell'
+import { TrainingStateProvider } from '@/components/training-state-provider'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -54,7 +55,9 @@ export default function RootLayout({
       className={`bg-background ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="bg-background font-sans antialiased">
-        <AppShell>{children}</AppShell>
+        <TrainingStateProvider>
+          <AppShell>{children}</AppShell>
+        </TrainingStateProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

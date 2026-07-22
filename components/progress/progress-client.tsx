@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type {
   SkillDefinition,
   UserSkillState,
@@ -29,6 +29,18 @@ import {
   TrendingUp,
   Trophy,
 } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import type { ProgressionStatus } from '@/lib/progression'
+import { localDateKey } from '@/lib/date'
+
+const STATUS_LABEL: Record<ProgressionStatus, string> = {
+  improving: 'Improving',
+  stable: 'Stable',
+  stalled: 'Stalled',
+  insufficient_exposure: 'Insufficient exposure',
+  ready_to_progress: 'Ready to progress',
+  limited_by_discomfort: 'Limited by discomfort',
+}
 
 function shortDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -61,6 +73,7 @@ export function ProgressClient({
   bodyweightLogs: BodyweightLog[]
   plan: PlanDay[]
 }) {
+  const trainingState = useTrainingState()
   const [open, setOpen] = useState(false)
   const [prompt, setPrompt] = useState<string | null>(null)
   const [note, setNote] = useState('')
@@ -79,11 +92,33 @@ export function ProgressClient({
     return sk?.stages.find((stg) => stg.id === st?.currentStageId)?.name ?? '—'
   }
 
-  const bwSorted = [...bodyweightLogs].sort((a, b) => a.date.localeCompare(b.date))
+  const effectiveBodyweight = trainingState.bodyweight.length
+    ? trainingState.bodyweight
+    : bodyweightLogs
+  const bwSorted = [...effectiveBodyweight].sort((a, b) => a.date.localeCompare(b.date))
   const bwSeries = bwSorted.map((b) => ({ label: shortDate(b.date), value: b.weightLb }))
   const bwCurrent = bwSorted[bwSorted.length - 1]?.weightLb
   const bwChange =
     bwCurrent != null ? bwCurrent - (bwSorted[0]?.weightLb ?? bwCurrent) : 0
+  const latestUpdates = Object.values(
+    trainingState.progressionUpdates.reduce<
+      Record<string, (typeof trainingState.progressionUpdates)[number]>
+    >((acc, update) => {
+      if (!acc[update.exerciseId] || acc[update.exerciseId].date < update.date) {
+        acc[update.exerciseId] = update
+      }
+      return acc
+    }, {}),
+  ).sort((a, b) => b.date.localeCompare(a.date))
+  const plancheUpdate = latestUpdates.find((update) => /planche/i.test(update.exerciseName))
+  const handstandUpdate = latestUpdates.find((update) =>
+    /kick.?up|handstand/i.test(update.exerciseName),
+  )
+  const todayValue = new Date(`${localDateKey()}T12:00:00`).getTime()
+  const recentCompleted = trainingState.completedWorkouts.filter((workout) => {
+    const age = todayValue - new Date(`${workout.date}T12:00:00`).getTime()
+    return age >= 0 && age < 7 * 86_400_000 && workout.completion.outcome !== 'skipped'
+  }).length
 
   // Snapshot cards
   const cards: {
@@ -97,14 +132,14 @@ export function ProgressClient({
       icon: Sparkles,
       label: 'Planche stage',
       value: stageName('skill-planche'),
-      sub: stateFor('skill-planche')?.bestResult,
+      sub: plancheUpdate?.nextTarget ?? stateFor('skill-planche')?.bestResult,
       accent: ACCENTS.coral,
     },
     {
       icon: Activity,
       label: 'Handstand stage',
       value: stageName('skill-handstand'),
-      sub: stateFor('skill-handstand')?.bestResult,
+      sub: handstandUpdate?.nextTarget ?? stateFor('skill-handstand')?.bestResult,
       accent: ACCENTS.sky,
     },
     {
@@ -174,7 +209,7 @@ export function ProgressClient({
             <TrendingUp className="size-4 text-mint" />
             <h3 className="text-sm font-medium">Weekly consistency</h3>
           </div>
-          <p className="text-3xl font-semibold tabular-nums">5 / 6</p>
+          <p className="text-3xl font-semibold tabular-nums">{recentCompleted} / 6</p>
           <p className="text-xs text-muted-foreground">
             Planned sessions completed this week
           </p>
@@ -194,6 +229,33 @@ export function ProgressClient({
             ))}
           </div>
         </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Progression decisions
+        </h2>
+        {latestUpdates.length ? (
+          <div className="flex flex-col gap-2">
+            {latestUpdates.slice(0, 6).map((update) => (
+              <div key={update.id} className="rounded-xl border border-border bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{update.exerciseName}</p>
+                  <Badge variant="secondary">{STATUS_LABEL[update.status]}</Badge>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+                  <p><span className="text-muted-foreground">Last: </span>{update.lastResult}</p>
+                  <p><span className="text-muted-foreground">Next: </span>{update.nextTarget}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{update.reason}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+            Complete a workout with a quick result to generate the first next-session targets.
+          </p>
+        )}
       </section>
 
       {/* Recent milestones + update */}

@@ -24,7 +24,11 @@ import {
   Info,
   RotateCcw,
   Waves,
+  Save,
 } from 'lucide-react'
+import { useTrainingState } from '@/components/training-state-provider'
+import { trainingStore } from '@/lib/training-store'
+import { startOfWeekKey } from '@/lib/date'
 
 type DayAction = 'skip' | 'shorten' | 'easier' | 'replace'
 
@@ -51,12 +55,18 @@ export function PlanClient({
   block: TrainingBlock
   todayWeekday: number
 }) {
+  const trainingState = useTrainingState()
+  const weekStart = startOfWeekKey()
+  const templatePlan = trainingState.recurringPlan.length
+    ? trainingState.recurringPlan
+    : initialPlan
+  const sourcePlan = trainingState.weekOverrides[weekStart]?.plan ?? templatePlan
   const [week, setWeek] = useState<WeekState>({
-    order: initialPlan.map((_, i) => i),
+    order: sourcePlan.map((_, i) => i),
     actions: {},
   })
 
-  const weekDays = week.order.map((i) => initialPlan[i])
+  const weekDays = week.order.map((i) => sourcePlan[i])
   const dirty =
     week.order.some((v, i) => v !== i) ||
     Object.values(week.actions).some(Boolean)
@@ -81,19 +91,49 @@ export function PlanClient({
     }))
 
   const restore = () =>
-    setWeek({ order: initialPlan.map((_, i) => i), actions: {} })
+    setWeek({ order: sourcePlan.map((_, i) => i), actions: {} })
+
+  const effectiveWeek = weekDays.map((day, index) => {
+    const action = week.actions[day.id]
+    const scheduled = { ...day, weekday: index }
+    if (action === 'skip') return { ...scheduled, isRest: true, exercises: [] }
+    if (action === 'shorten') {
+      return {
+        ...scheduled,
+        estimatedMinutes: Math.max(10, Math.round(day.estimatedMinutes * 0.5)),
+        exercises: day.exercises.filter((exercise) =>
+          exercise.section === 'warmup' || exercise.section === 'primary',
+        ),
+      }
+    }
+    if (action === 'easier') return { ...scheduled, intensity: 'light' as const }
+    if (action === 'replace') {
+      return {
+        ...scheduled,
+        title: 'Flexible replacement session',
+        primaryFocus: 'Recovery, mobility, or light skill practice',
+        intensity: 'light' as const,
+      }
+    }
+    return scheduled
+  })
+
+  const saveWeek = () => {
+    trainingStore.saveWeekOverride(weekStart, effectiveWeek)
+    setWeek({ order: effectiveWeek.map((_, index) => index), actions: {} })
+  }
 
   const metrics = useMemo(
     () =>
       METRIC_DEFS.map((m) => ({
         label: m.label,
-        count: initialPlan.filter((d) => !d.isRest && m.match(d)).length,
+        count: sourcePlan.filter((d) => !d.isRest && m.match(d)).length,
       })),
-    [initialPlan],
+    [sourcePlan],
   )
 
   const today =
-    initialPlan.find((d) => d.weekday === todayWeekday) ?? initialPlan[0]
+    sourcePlan.find((d) => d.weekday === todayWeekday) ?? sourcePlan[0]
 
   return (
     <div className="flex flex-col gap-5">
@@ -143,7 +183,7 @@ export function PlanClient({
           <p className="text-sm text-muted-foreground">
             Your recurring default routine. Temporary changes live under This Week.
           </p>
-          {initialPlan.map((day) => (
+          {templatePlan.map((day) => (
             <DayCard key={day.id} day={day} variant="template" />
           ))}
         </TabsContent>
@@ -155,10 +195,16 @@ export function PlanClient({
               Temporary changes for this week only.
             </p>
             {dirty && (
-              <Button variant="ghost" size="sm" onClick={restore}>
-                <RotateCcw className="size-3.5" />
-                Restore
-              </Button>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={restore}>
+                  <RotateCcw className="size-3.5" />
+                  Restore
+                </Button>
+                <Button size="sm" onClick={saveWeek}>
+                  <Save className="size-3.5" />
+                  Save week
+                </Button>
+              </div>
             )}
           </div>
           {weekDays.map((day, i) => (

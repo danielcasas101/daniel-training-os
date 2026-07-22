@@ -23,6 +23,8 @@ import {
   Check,
   CalendarClock,
 } from 'lucide-react'
+import { trainingStore } from '@/lib/training-store'
+import { useTrainingState } from '@/components/training-state-provider'
 
 const MODES = [
   { id: 'summer', label: 'Summer', desc: 'More time, higher volume' },
@@ -41,18 +43,33 @@ export function SettingsClient({
   equipment: Equipment[]
   injuries: InjuryHistory[]
 }) {
-  const [mode, setMode] = useState<string>(preferences.activeMode)
-  const [units, setUnits] = useState(preferences.units)
-  const [equip, setEquip] = useState(equipment)
+  const trainingState = useTrainingState()
+  const currentProfile = trainingState.profile ?? profile
+  const currentPreferences = trainingState.preferences ?? preferences
+  const equip = trainingState.equipment.length ? trainingState.equipment : equipment
+  const currentInjuries = trainingState.injuries.length ? trainingState.injuries : injuries
   const [saved, setSaved] = useState(false)
 
+  function updateSettings(
+    nextProfile = currentProfile,
+    nextPreferences = currentPreferences,
+    nextEquipment = equip,
+  ) {
+    trainingStore.saveSettings(nextProfile, nextPreferences, nextEquipment, currentInjuries)
+  }
+
   function toggleEquip(id: string) {
-    setEquip((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, available: !e.available } : e)),
+    updateSettings(
+      currentProfile,
+      currentPreferences,
+      equip.map((item) =>
+        item.id === id ? { ...item, available: !item.available } : item,
+      ),
     )
   }
 
   function save() {
+    updateSettings()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -71,13 +88,23 @@ export function SettingsClient({
             <Label htmlFor="name" className="text-xs text-muted-foreground">
               Name
             </Label>
-            <Input id="name" defaultValue={profile.name} className="mt-1" />
+            <Input
+              id="name"
+              value={currentProfile.name}
+              onChange={(event) => updateSettings({ ...currentProfile, name: event.target.value })}
+              className="mt-1"
+            />
           </div>
           <div>
             <Label htmlFor="tz" className="text-xs text-muted-foreground">
               Timezone
             </Label>
-            <Input id="tz" defaultValue={profile.timezone} className="mt-1" />
+            <Input
+              id="tz"
+              value={currentProfile.timezone}
+              onChange={(event) => updateSettings({ ...currentProfile, timezone: event.target.value })}
+              className="mt-1"
+            />
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="ctx" className="text-xs text-muted-foreground">
@@ -85,7 +112,8 @@ export function SettingsClient({
             </Label>
             <Textarea
               id="ctx"
-              defaultValue={profile.context}
+              value={currentProfile.context}
+              onChange={(event) => updateSettings({ ...currentProfile, context: event.target.value })}
               className="mt-1"
               rows={2}
             />
@@ -99,17 +127,22 @@ export function SettingsClient({
           {MODES.map((m) => (
             <button
               key={m.id}
-              onClick={() => setMode(m.id)}
+              onClick={() =>
+                updateSettings(currentProfile, {
+                  ...currentPreferences,
+                  activeMode: m.id as UserPreferences['activeMode'],
+                })
+              }
               className={cn(
                 'rounded-lg border p-3 text-left transition-colors',
-                mode === m.id
+                currentPreferences.activeMode === m.id
                   ? 'border-primary bg-primary/10'
                   : 'border-border bg-card hover:border-muted-foreground/40',
               )}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{m.label}</span>
-                {mode === m.id && <Check className="size-4 text-primary" />}
+                {currentPreferences.activeMode === m.id && <Check className="size-4 text-primary" />}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{m.desc}</p>
             </button>
@@ -147,7 +180,7 @@ export function SettingsClient({
       <Card className="p-4">
         <SectionTitle icon={HeartPulse} title="Injury history" />
         <div className="mt-3 flex flex-col gap-2">
-          {injuries.map((inj) => (
+          {currentInjuries.map((inj) => (
             <div
               key={inj.id}
               className="flex items-start justify-between gap-3 rounded-md border border-border bg-card/50 p-3"
@@ -175,7 +208,7 @@ export function SettingsClient({
           <div>
             <p className="text-sm font-medium">Units</p>
             <p className="text-xs text-muted-foreground">
-              {units === 'imperial' ? 'Pounds, inches' : 'Kilograms, centimeters'}
+              {currentPreferences.units === 'imperial' ? 'Pounds, inches' : 'Kilograms, centimeters'}
             </p>
           </div>
           <div className="flex gap-1.5">
@@ -183,8 +216,10 @@ export function SettingsClient({
               <Button
                 key={u}
                 size="sm"
-                variant={units === u ? 'default' : 'outline'}
-                onClick={() => setUnits(u)}
+                variant={currentPreferences.units === u ? 'default' : 'outline'}
+                onClick={() =>
+                  updateSettings(currentProfile, { ...currentPreferences, units: u })
+                }
                 className="capitalize"
               >
                 {u}

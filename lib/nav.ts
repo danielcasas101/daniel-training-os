@@ -25,11 +25,11 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/plan', label: 'Plan', icon: CalendarDays, primaryMobile: true },
   { href: '/skills', label: 'Skills', icon: Sparkles, primaryMobile: true },
   { href: '/flexibility', label: 'Flexibility', icon: StretchHorizontal, primaryMobile: true },
-  { href: '/progress', label: 'Progress', icon: Activity },
+  { href: '/progress', label: 'Progress', icon: Activity, primaryMobile: true },
   { href: '/body', label: 'Body', icon: Dumbbell },
   { href: '/diet', label: 'Diet', icon: Apple },
   { href: '/library', label: 'Library', icon: Library },
-  { href: '/coach', label: 'Coach', icon: MessageSquare, primaryMobile: true },
+  { href: '/coach', label: 'Coach', icon: MessageSquare },
   { href: '/settings', label: 'Settings', icon: User },
 ]
 
