@@ -68,6 +68,7 @@ export function ProgressClient({
   skills,
   skillStates,
   bodyweightLogs,
+  plan,
 }: {
   skills: SkillDefinition[]
   skillStates: UserSkillState[]
@@ -125,6 +126,12 @@ export function ProgressClient({
     return age >= 0 && age < 7 * 86_400_000 && workout.completion.outcome !== 'skipped'
   }).length
   const currentWeekStart = startOfWeekKey()
+  const currentPlan =
+    trainingState.weekOverrides[currentWeekStart]?.plan ??
+    (trainingState.recurringPlan.length ? trainingState.recurringPlan : plan)
+  const plannedSessions = currentPlan.filter(
+    (day) => !day.isRest && day.exercises.length > 0,
+  ).length
   const completedWeekdays = new Set(
     trainingState.completedWorkouts
       .filter(
@@ -224,7 +231,9 @@ export function ProgressClient({
             <TrendingUp className="size-4 text-mint" />
             <h3 className="text-sm font-medium">Weekly consistency</h3>
           </div>
-          <p className="text-3xl font-semibold tabular-nums">{recentCompleted} / 6</p>
+          <p className="text-3xl font-semibold tabular-nums">
+            {recentCompleted} / {plannedSessions}
+          </p>
           <p className="text-xs text-muted-foreground">
             Planned sessions completed this week
           </p>

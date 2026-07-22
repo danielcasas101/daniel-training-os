@@ -28,6 +28,19 @@ import {
 import { useTrainingState } from '@/components/training-state-provider'
 import { trainingStore } from '@/lib/training-store'
 import type { ProgressionUpdate } from '@/lib/training-state'
+import { localDateKey } from '@/lib/date'
+
+function movementPattern(skill: SkillDefinition) {
+  return /planche/i.test(skill.name)
+    ? /planche/i
+    : /handstand/i.test(skill.name)
+      ? /handstand|kick.?up/i
+      : /press|compression/i.test(skill.name)
+        ? /press|compression|pike/i
+        : /physique|strength/i.test(skill.name)
+          ? /bench|pull|dip|row|dumbbell|cable/i
+          : /swim/i
+}
 
 export function SkillsClient({
   skills,
@@ -41,16 +54,20 @@ export function SkillsClient({
   const optional = skills.filter((skill) => !trainingState.activeSkillIds.includes(skill.id))
   const stateFor = (id: string) => states.find((s) => s.skillId === id)
   const updateFor = (skill: SkillDefinition) => {
-    const pattern = /planche/i.test(skill.name)
-      ? /planche/i
-      : /handstand/i.test(skill.name)
-        ? /handstand|kick.?up/i
-        : /press|compression/i.test(skill.name)
-          ? /press|compression|pike/i
-          : /physique|strength/i.test(skill.name)
-            ? /bench|pull|dip|row|dumbbell|cable/i
-            : /swim/i
+    const pattern = movementPattern(skill)
     return trainingState.progressionUpdates.find((update) => pattern.test(update.exerciseName))
+  }
+  const exposureFor = (skill: SkillDefinition) => {
+    const pattern = movementPattern(skill)
+    const today = new Date(`${localDateKey()}T12:00:00`).getTime()
+    return new Set(
+      trainingState.progressionUpdates
+        .filter((update) => {
+          const age = today - new Date(`${update.date}T12:00:00`).getTime()
+          return age >= 0 && age < 7 * 86_400_000 && pattern.test(update.exerciseName)
+        })
+        .map((update) => update.date),
+    ).size
   }
 
   const addToPlan = (skill: SkillDefinition) => {
@@ -94,6 +111,7 @@ export function SkillsClient({
             skill={skill}
             state={stateFor(skill.id)}
             progression={updateFor(skill)}
+            recentExposure={exposureFor(skill)}
             onAdd={() => addToPlan(skill)}
           />
         ))}
@@ -117,11 +135,13 @@ function SkillCard({
   skill,
   state,
   progression,
+  recentExposure,
   onAdd,
 }: {
   skill: SkillDefinition
   state?: UserSkillState
   progression?: ProgressionUpdate
+  recentExposure: number
   onAdd: () => void
 }) {
   const accent = accentForCategory(skill.category, skill.name)
@@ -170,10 +190,7 @@ function SkillCard({
         <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
           <Field label="Last result" value={progression?.lastResult ?? state?.bestResult ?? '—'} />
           <Field label="Today target" value={progression?.nextTarget ?? state?.nextMilestone ?? '—'} />
-          <Field
-            label="Frequency"
-            value={`${skill.currentWeeklyFrequency}× / ${skill.recommendedFrequency}`}
-          />
+          <Field label="Recent exposure" value={`${recentExposure}× in the last 7 days`} />
           <Field label="Next stage" value={nextStage?.name ?? 'Top stage'} />
         </div>
 
