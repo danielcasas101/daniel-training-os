@@ -117,6 +117,12 @@ export function ExerciseDetailSheet({
                 <Block label="What it should feel like" tone="muted" icon={Sparkles}>
                   <p>{inst.feelsLike}</p>
                 </Block>
+                <Block label="What it should not feel like" tone="warn" icon={AlertTriangle}>
+                  <p>
+                    {inst.shouldNotFeelLike ??
+                      'Sharp, unstable, pinching, or progressively increasing joint pain.'}
+                  </p>
+                </Block>
                 {inst.guideUrl && (
                   <Button
                     variant="outline"

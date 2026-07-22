@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type {
   Profile,
   UserPreferences,
@@ -22,6 +23,7 @@ import {
   Settings as SettingsIcon,
   Check,
   CalendarClock,
+  ShieldCheck,
 } from 'lucide-react'
 import { trainingStore } from '@/lib/training-store'
 import { useTrainingState } from '@/components/training-state-provider'
@@ -81,6 +83,21 @@ export function SettingsClient({
 
   return (
     <div className="flex flex-col gap-6">
+      <Card className="p-4">
+        <SectionTitle icon={ShieldCheck} title="Account & sync" />
+        <div className="mt-3 flex flex-col gap-3 rounded-md border border-border bg-card/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Secure cloud backup</p>
+            <p className="text-xs text-muted-foreground">
+              Sign in by email after Supabase is connected to sync training history across devices.
+            </p>
+          </div>
+          <Button nativeButton={false} render={<Link href="/login" />}>
+            Manage sign-in
+          </Button>
+        </div>
+      </Card>
+
       <Card className="p-4">
         <SectionTitle icon={User} title="Profile" />
         <div className="mt-3 grid gap-4 sm:grid-cols-2">

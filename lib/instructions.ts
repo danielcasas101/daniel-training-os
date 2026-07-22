@@ -27,7 +27,6 @@ export const instructions: ExerciseInstruction[] = [
     feelsLike: 'Hard work in the front delts and the long head of biceps; locked elbows.',
     discomfortWarning: 'Stop the set if forearm pain exceeds 2/5. Do not train through wrist pain.',
     whyInPlan: 'Your primary planche stage right now — building repeatable 10-12s holds.',
-    guideUrl: 'https://example.com/guides/planche',
   },
   {
     key: 'advanced tuck negatives',
@@ -65,7 +64,6 @@ export const instructions: ExerciseInstruction[] = [
     harder: 'Add a hold target after each successful entry.',
     feelsLike: 'A brief moment of weightlessness when you find the stack.',
     whyInPlan: 'Kick-up consistency is your current handstand limiter (~3/10).',
-    guideUrl: 'https://example.com/guides/handstand',
   },
   {
     key: 'wall handstand line drills',
@@ -170,7 +168,6 @@ export const instructions: ExerciseInstruction[] = [
     harder: 'Add short pace intervals at the end.',
     feelsLike: 'Easy, technique-focused effort — low-impact cross-training.',
     whyInPlan: 'Consistent Tue/Thu lessons build your swimming skill and cardio.',
-    guideUrl: 'https://example.com/guides/swimming',
   },
   {
     key: 'box press negatives',
@@ -188,7 +185,6 @@ export const instructions: ExerciseInstruction[] = [
     harder: 'Lower box or pause mid-range.',
     feelsLike: 'Compression and shoulder strength fighting the descent.',
     whyInPlan: 'Trains the eccentric strength your press pathway needs.',
-    guideUrl: 'https://example.com/guides/press',
   },
   // --- Flexibility / mobility drills ---
   {
@@ -282,5 +278,27 @@ export function findInstruction(name: string): ExerciseInstruction | undefined {
   for (const inst of instructions) {
     if (n.includes(inst.key) || inst.key.includes(n)) return inst
   }
-  return undefined
+  if (!n) return undefined
+
+  // A safe reusable fallback keeps every plan item actionable while focused,
+  // personalized guides are added in small batches rather than bulk filler.
+  return {
+    key: n,
+    title: name,
+    summary: 'Complete the prescribed target with controlled, repeatable technique.',
+    setup: 'Use the equipment shown in the plan and choose a stable, pain-free starting position.',
+    howTo: [
+      'Set up deliberately and rehearse the first repetition or position.',
+      'Complete the prescribed work without rushing the range of motion.',
+      'Stop the set when technique changes materially, then record the useful result.',
+    ],
+    cues: ['Move with control', 'Keep the target muscles active', 'Leave sharp pain alone'],
+    commonMistake: 'Chasing the target after position or control has broken down.',
+    easier: 'Reduce load, range, hold time, or repetitions while preserving the movement pattern.',
+    harder: 'Add difficulty only after every working set is clean and repeatable.',
+    feelsLike: 'Controlled muscular effort in the intended area with stable joints.',
+    shouldNotFeelLike: 'Sharp, unstable, pinching, or progressively increasing joint pain.',
+    discomfortWarning: 'Stop or regress if wrist, elbow, forearm, or shoulder discomfort becomes notable.',
+    whyInPlan: 'This item supports the focus and training dose assigned to this day.',
+  }
 }

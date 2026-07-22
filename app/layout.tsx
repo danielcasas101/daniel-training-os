@@ -1,15 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { AppShell } from '@/components/shell/app-shell'
 import { TrainingStateProvider } from '@/components/training-state-provider'
 import './globals.css'
-
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
 
 export const metadata: Metadata = {
   title: 'Daniel Training OS',
@@ -50,10 +43,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="en"
-      className={`bg-background ${geistSans.variable} ${geistMono.variable}`}
-    >
+    <html lang="en" className="bg-background">
       <body className="bg-background font-sans antialiased">
         <TrainingStateProvider>
           <AppShell>{children}</AppShell>

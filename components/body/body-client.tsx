@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { Check, Plus, Scale, TrendingUp } from 'lucide-react'
 import { useTrainingState } from '@/components/training-state-provider'
 import { trainingStore } from '@/lib/training-store'
-import { localDateKey } from '@/lib/date'
+import { localDateKey, startOfWeekKey } from '@/lib/date'
 
 function shortDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -28,8 +28,9 @@ export function BodyClient({
   const entries = trainingState.bodyweight.length ? trainingState.bodyweight : logs
   const [weight, setWeight] = useState('')
   const [adding, setAdding] = useState(false)
-  const [note, setNote] = useState('')
   const [noteSaved, setNoteSaved] = useState(false)
+  const currentMonth = localDateKey().slice(0, 7)
+  const note = trainingState.bodyNotes.find((entry) => entry.month === currentMonth)?.note ?? ''
 
   function addEntry() {
     const w = parseFloat(weight)
@@ -45,6 +46,16 @@ export function BodyClient({
   const current = sorted[sorted.length - 1]?.weightLb ?? profile.bodyweightLb
   const start = sorted[0]?.weightLb ?? current
   const change = current - start
+  const weekStart = startOfWeekKey()
+  const gymTarget = trainingState.recurringPlan.filter(
+    (day) => !day.isRest && /gym|size|strength/i.test(`${day.title} ${day.primaryFocus}`),
+  ).length
+  const gymCompleted = trainingState.completedWorkouts.filter(
+    (record) =>
+      record.date >= weekStart &&
+      record.completion.outcome !== 'skipped' &&
+      record.workout.exercises.some((exercise) => exercise.section === 'strength'),
+  ).length
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,7 +75,9 @@ export function BodyClient({
           <p className="text-xs text-muted-foreground">Change this period (lb)</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-2xl font-semibold tabular-nums">3 / 3</p>
+          <p className="text-2xl font-semibold tabular-nums">
+            {gymCompleted} / {Math.max(gymTarget, 1)}
+          </p>
           <p className="text-xs text-muted-foreground">Gym sessions this week</p>
         </div>
       </section>
@@ -131,7 +144,11 @@ export function BodyClient({
           placeholder="How does training and physique feel this month? Energy, recovery, anything notable."
           value={note}
           onChange={(e) => {
-            setNote(e.target.value)
+            trainingStore.saveBodyNote({
+              id: `body-note-${currentMonth}`,
+              month: currentMonth,
+              note: e.target.value,
+            })
             setNoteSaved(false)
           }}
           rows={3}

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { Check, Droplet, Dumbbell, Utensils, Waves } from 'lucide-react'
 import { trainingStore } from '@/lib/training-store'
 import { localDateKey } from '@/lib/date'
+import { useTrainingState } from '@/components/training-state-provider'
 
 // Daniel ~168 lb -> ~0.9-1g/lb protein target.
 const PROTEIN_TARGET_G = 160
@@ -58,6 +59,7 @@ export function DietClient({
   preferences: UserPreferences
   profile: Profile
 }) {
+  const trainingState = useTrainingState()
   const [protein, setProtein] = useState<string | null>(null)
   const [ateEnough, setAteEnough] = useState<string | null>(null)
   const [hydration, setHydration] = useState<string | null>(null)
@@ -123,6 +125,27 @@ export function DietClient({
           </Button>
         </div>
       </section>
+
+      {trainingState.nutritionCheckins.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Recent check-ins
+          </h2>
+          <div className="flex flex-col gap-2">
+            {trainingState.nutritionCheckins.slice(0, 5).map((checkin) => (
+              <div
+                key={checkin.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs"
+              >
+                <span>{checkin.date}</span>
+                <span className="capitalize text-muted-foreground">
+                  Protein {checkin.protein} · Hydration {checkin.hydration}/5
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recommendations */}
       <section>

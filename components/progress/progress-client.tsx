@@ -31,7 +31,8 @@ import {
 } from 'lucide-react'
 import { useTrainingState } from '@/components/training-state-provider'
 import type { ProgressionStatus } from '@/lib/progression'
-import { localDateKey } from '@/lib/date'
+import { localDateKey, mondayFirstWeekday, startOfWeekKey } from '@/lib/date'
+import { trainingStore } from '@/lib/training-store'
 
 const STATUS_LABEL: Record<ProgressionStatus, string> = {
   improving: 'Improving',
@@ -77,12 +78,16 @@ export function ProgressClient({
   const [open, setOpen] = useState(false)
   const [prompt, setPrompt] = useState<string | null>(null)
   const [note, setNote] = useState('')
-  const [milestones, setMilestones] = useState<MilestoneEntry[]>(() =>
-    skillStates
+  const seededMilestones = skillStates
       .flatMap((s) => s.history.map((h, i) => ({ id: `${s.skillId}-${i}`, ...h })))
       .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 5),
-  )
+      .slice(0, 5)
+  const milestones: MilestoneEntry[] = [
+    ...trainingState.milestones,
+    ...seededMilestones.filter(
+      (seeded) => !trainingState.milestones.some((saved) => saved.id === seeded.id),
+    ),
+  ].sort((a, b) => b.date.localeCompare(a.date))
 
   const stateFor = (id: string) => skillStates.find((s) => s.skillId === id)
   const skillFor = (id: string) => skills.find((s) => s.id === id)
@@ -119,6 +124,15 @@ export function ProgressClient({
     const age = todayValue - new Date(`${workout.date}T12:00:00`).getTime()
     return age >= 0 && age < 7 * 86_400_000 && workout.completion.outcome !== 'skipped'
   }).length
+  const currentWeekStart = startOfWeekKey()
+  const completedWeekdays = new Set(
+    trainingState.completedWorkouts
+      .filter(
+        (workout) =>
+          workout.date >= currentWeekStart && workout.completion.outcome !== 'skipped',
+      )
+      .map((workout) => mondayFirstWeekday(new Date(`${workout.date}T12:00:00`))),
+  )
 
   // Snapshot cards
   const cards: {
@@ -145,27 +159,28 @@ export function ProgressClient({
     {
       icon: Trophy,
       label: 'Best recent hold',
-      value: '10s',
-      sub: 'Open tuck, parallettes',
+      value: plancheUpdate?.lastResult ?? '10s',
+      sub: plancheUpdate?.exerciseName ?? 'Open tuck, parallettes',
       accent: ACCENTS.mint,
     },
     {
       icon: Flame,
       label: 'Kick-up consistency',
-      value: '3 / 10',
-      sub: 'Freestanding attempts',
+      value: handstandUpdate?.lastResult ?? '3 / 10',
+      sub: handstandUpdate?.reason ?? 'Freestanding attempts',
       accent: ACCENTS.sunny,
     },
   ]
 
   function saveUpdate() {
     if (!prompt && !note.trim()) return
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateKey()
     const text = note.trim() ? `${prompt ? prompt + ' — ' : ''}${note.trim()}` : prompt!
-    setMilestones((prev) => [
-      { id: `u-${Date.now()}`, date: today, note: text },
-      ...prev,
-    ])
+    trainingStore.saveMilestone({
+      id: `milestone-${today}-${trainingState.milestones.length + 1}`,
+      date: today,
+      note: text,
+    })
     setNote('')
     setPrompt(null)
     setOpen(false)
@@ -219,7 +234,7 @@ export function ProgressClient({
                 key={i}
                 className={cn(
                   'flex h-7 flex-1 items-center justify-center rounded text-[10px] font-medium',
-                  i < 5
+                  completedWeekdays.has(i)
                     ? 'bg-mint text-background'
                     : 'bg-muted text-muted-foreground',
                 )}

@@ -170,7 +170,7 @@ export function LibraryClient({ resources }: { resources: GuideResource[] }) {
                   />
                   {r.completed ? 'Completed' : 'Mark done'}
                 </Button>
-                {!r.url.includes('example.com') && (
+                {r.url && (
                   <Button
                     variant="ghost"
                     size="sm"

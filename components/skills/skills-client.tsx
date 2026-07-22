@@ -37,8 +37,8 @@ export function SkillsClient({
   states: UserSkillState[]
 }) {
   const trainingState = useTrainingState()
-  const active = skills.filter((s) => s.active)
-  const optional = skills.filter((s) => !s.active)
+  const active = skills.filter((skill) => trainingState.activeSkillIds.includes(skill.id))
+  const optional = skills.filter((skill) => !trainingState.activeSkillIds.includes(skill.id))
   const stateFor = (id: string) => states.find((s) => s.skillId === id)
   const updateFor = (skill: SkillDefinition) => {
     const pattern = /planche/i.test(skill.name)
@@ -75,6 +75,11 @@ export function SkillsClient({
     trainingStore.saveRecurringPlan(plan)
   }
 
+  const activateSkill = (skill: SkillDefinition) => {
+    trainingStore.activateSkill(skill.id)
+    addToPlan(skill)
+  }
+
   return (
     <Tabs defaultValue="active">
       <TabsList>
@@ -100,7 +105,7 @@ export function SkillsClient({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {optional.map((skill) => (
-            <OptionalCard key={skill.id} skill={skill} />
+            <OptionalCard key={skill.id} skill={skill} onActivate={() => activateSkill(skill)} />
           ))}
         </div>
       </TabsContent>
@@ -121,11 +126,12 @@ function SkillCard({
 }) {
   const accent = accentForCategory(skill.category, skill.name)
   const currentStage = skill.stages.find((s) => s.id === state?.currentStageId)
-  const currentOrder = currentStage?.order ?? 0
+  const effectiveCurrentStage = currentStage ?? skill.stages[0]
+  const currentOrder = effectiveCurrentStage?.order ?? 0
   const total = skill.stages.length
   const nextStage = skill.stages.find((s) => s.order === currentOrder + 1)
   // Progress through the ladder, treating the current stage as in-flight.
-  const pct = Math.round(((currentOrder + 0.5) / total) * 100)
+  const pct = Math.round(((currentOrder - 0.5) / total) * 100)
 
   return (
     <Card className="gap-0 overflow-hidden p-0">
@@ -146,7 +152,7 @@ function SkillCard({
         {/* Stage + progress bar */}
         <div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium">{currentStage?.name ?? '—'}</span>
+            <span className="font-medium">{effectiveCurrentStage?.name ?? '—'}</span>
             <span className={cn('font-medium tabular-nums', accent.text)}>
               Stage {currentOrder} / {total}
             </span>
@@ -363,7 +369,7 @@ function HistoryDialog({
   )
 }
 
-function OptionalCard({ skill }: { skill: SkillDefinition }) {
+function OptionalCard({ skill, onActivate }: { skill: SkillDefinition; onActivate: () => void }) {
   const accent = accentForCategory(skill.category, skill.name)
   return (
     <Card className="gap-0 p-4">
@@ -386,7 +392,7 @@ function OptionalCard({ skill }: { skill: SkillDefinition }) {
           </p>
         )}
       </div>
-      <Button size="sm" variant="outline" className="mt-3 w-full">
+      <Button size="sm" variant="outline" className="mt-3 w-full" onClick={onActivate}>
         <Plus className="size-3.5" />
         Activate skill
       </Button>

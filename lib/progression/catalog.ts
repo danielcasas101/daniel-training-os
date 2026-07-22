@@ -32,6 +32,29 @@ function resultNumbers(exercise: WorkoutExercise): number[] {
   return setValues.length ? setValues : numbers(exercise.actualResult)
 }
 
+function handstandPerformance(exercise: WorkoutExercise) {
+  const raw = [exercise.actualResult, ...exercise.sets.map((set) => set.result)]
+    .filter(Boolean)
+    .join(' ')
+  const fraction = raw.match(/(\d+)\s*\/\s*(\d+)/)
+  const attemptLabel = raw.match(/(\d+)\s*(?:attempt|tries)/i)
+  const successLabel = raw.match(/(\d+)\s*(?:success|made|entries)/i)
+  const holdLabel = raw.match(/(\d+)\s*s(?:ec(?:ond)?s?)?\s*(?:best|hold)?/i)
+  const parsed = numbers(raw)
+  if (fraction) {
+    return {
+      successfulEntries: Number(fraction[1]),
+      attempts: Number(fraction[2]),
+      bestHoldSeconds: holdLabel ? Number(holdLabel[1]) : parsed[2] ?? 0,
+    }
+  }
+  return {
+    attempts: attemptLabel ? Number(attemptLabel[1]) : parsed[0] ?? 10,
+    successfulEntries: successLabel ? Number(successLabel[1]) : parsed[1] ?? 3,
+    bestHoldSeconds: holdLabel ? Number(holdLabel[1]) : parsed[2] ?? 0,
+  }
+}
+
 function targetShape(target: string) {
   const match = target.match(/(\d+)\s*x\s*(\d+)(?:\s*[-–]\s*(\d+))?/i)
   return {
@@ -109,10 +132,34 @@ export function createProgressionUpdate(
   const pain = discomfort(completion, exercise)
   const previous = previousFor(exercise, updates)
 
+  // A completion checkbox is useful exposure data, but it is not evidence that
+  // a max hold or rep target was achieved. Keep the current prescription until
+  // Daniel records an actual result instead of manufacturing performance data.
+  if (!values.length) {
+    return {
+      id: `${date}:${exercise.id}`,
+      date,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      status: pain === 'notable' ? 'limited_by_discomfort' : 'stable',
+      lastResult: 'Exposure completed · result not recorded',
+      nextTarget: previous[previous.length - 1]?.nextTarget ?? exercise.target,
+      reason:
+        pain === 'notable'
+          ? 'Discomfort was reported, so repeat conservatively and record the result before progressing.'
+          : 'The session counts as exposure, but a result is needed before the target can advance.',
+      kind: prescription.kind,
+      values: [],
+      form,
+      discomfort: pain,
+    }
+  }
+
   if (prescription.kind === 'handstand') {
-    const attempts = values[0] ?? 10
-    const successes = values[1] ?? Math.round(attempts * 0.3)
-    const bestHold = values[2] ?? 0
+    const performance = handstandPerformance(exercise)
+    const attempts = performance.attempts
+    const successes = performance.successfulEntries
+    const bestHold = performance.bestHoldSeconds
     const priorResults: HandstandResult[] = previous.map((item) => ({
       date: item.date,
       attempts: item.attempts ?? 10,

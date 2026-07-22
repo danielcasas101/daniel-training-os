@@ -16,6 +16,7 @@ export function TrainingStateProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     let unsubscribeStore: (() => void) | undefined
     let saveTimer: ReturnType<typeof setTimeout> | undefined
+    let saveQueue = Promise.resolve()
 
     async function connectRemote() {
       const { data } = await client.auth.getUser()
@@ -28,15 +29,17 @@ export function TrainingStateProvider({ children }: { children: ReactNode }) {
       unsubscribeStore = trainingStore.subscribe(() => {
         if (saveTimer) clearTimeout(saveTimer)
         saveTimer = setTimeout(() => {
-          void saveTrainingState(client, data.user!.id, trainingStore.getSnapshot())
+          saveQueue = saveQueue
+            .then(() => saveTrainingState(client, data.user!.id, trainingStore.getSnapshot()))
+            .catch(() => undefined)
         }, 600)
       })
     }
 
-    void connectRemote()
+    void connectRemote().catch(() => undefined)
     const { data: authListener } = client.auth.onAuthStateChange(() => {
       unsubscribeStore?.()
-      void connectRemote()
+      void connectRemote().catch(() => undefined)
     })
 
     return () => {

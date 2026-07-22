@@ -51,7 +51,7 @@ export function CoachClient({ conversation }: { conversation: CoachConversation 
       id: nextMessageId('-coach'),
       role: 'coach',
       content:
-        `I reviewed “${userText}” against the current sample workout, pain logs, and plan. Review the proposed changes below and approve only the ones you want applied.`,
+        `This deterministic preview reviewed “${userText}” against the current sample data. It does not apply changes; use Plan or Modify Today for real edits.`,
       createdAt: new Date().toISOString(),
     }
     setMessages((prev) => [...prev, reply])
@@ -96,8 +96,8 @@ export function CoachClient({ conversation }: { conversation: CoachConversation 
       <Card className="flex-row items-start gap-2 border-primary/20 bg-primary/5 p-3 text-xs">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
         <p className="text-muted-foreground">
-          Your coach reviews your real logged data and proposes plan changes. Nothing
-          is applied until you approve it.
+          Coach is a low-priority deterministic preview. It does not send data to an AI
+          or change your plan; real changes stay in Plan and Modify Today.
         </p>
       </Card>
 

@@ -1,6 +1,7 @@
 // Repository interfaces. These define the data-access contract so a Supabase
 // (or other) implementation can be dropped in later without changing UI code.
-// For the first version, see ./repositories.mock.ts.
+// The working local repository is implemented by training-store.ts; the protected
+// remote implementation lives in supabase/training-repository.ts.
 
 import type {
   BodyweightLog,
@@ -61,6 +62,6 @@ export interface LibraryRepository {
 
 export interface CoachRepository {
   getConversation(): Promise<CoachConversation>
-  // Later: streamed via OpenAI. For now, returns a structured mock review.
+  // A future AI implementation must return proposals that require explicit approval.
   proposeChanges(prompt: string): Promise<ProposedPlanChange[]>
 }

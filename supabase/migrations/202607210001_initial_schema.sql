@@ -43,6 +43,7 @@ create table public.daily_plans (
   original_plan jsonb not null,
   modified_plan jsonb not null,
   modification jsonb,
+  version text not null default 'standard' check (version in ('standard', 'short', 'light')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, plan_date)
@@ -71,6 +72,15 @@ create table public.progression_events (
   primary key (user_id, id)
 );
 
+create table public.skill_milestones (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  milestone_date date not null,
+  note text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
 create table public.flexibility_sessions (
   id text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -88,6 +98,16 @@ create table public.bodyweight_logs (
   created_at timestamptz not null default now(),
   primary key (user_id, id),
   unique (user_id, log_date)
+);
+
+create table public.body_notes (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  note_month text not null check (note_month ~ '^[0-9]{4}-[0-9]{2}$'),
+  note text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, id),
+  unique (user_id, note_month)
 );
 
 create table public.nutrition_checkins (
@@ -131,8 +151,10 @@ alter table public.week_plans enable row level security;
 alter table public.daily_plans enable row level security;
 alter table public.workouts enable row level security;
 alter table public.progression_events enable row level security;
+alter table public.skill_milestones enable row level security;
 alter table public.flexibility_sessions enable row level security;
 alter table public.bodyweight_logs enable row level security;
+alter table public.body_notes enable row level security;
 alter table public.nutrition_checkins enable row level security;
 alter table public.exercise_definitions enable row level security;
 alter table public.guide_resources enable row level security;
@@ -149,9 +171,13 @@ create policy "owners manage workouts" on public.workouts
 for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "owners manage progression" on public.progression_events
 for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "owners manage milestones" on public.skill_milestones
+for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "owners manage flexibility" on public.flexibility_sessions
 for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "owners manage bodyweight" on public.bodyweight_logs
+for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "owners manage body notes" on public.body_notes
 for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "owners manage nutrition" on public.nutrition_checkins
 for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);

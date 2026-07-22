@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyModificationToPlan, applyModificationToWorkout, workoutFromPlan } from './planning'
+import { applyModificationToPlan, applyModificationToWorkout, applyWorkoutVersion, workoutFromPlan } from './planning'
 import { weekPlan } from './seed-data'
 
 describe('planning records', () => {
@@ -48,5 +48,13 @@ describe('planning records', () => {
     })
     expect(changed.find((day) => day.weekday === 1)?.swimStatus).toBe('none')
     expect(changed.find((day) => day.weekday === 3)?.swimStatus).toBe('lesson')
+  })
+
+  it('creates a short version without mutating the standard workout', () => {
+    const standard = workoutFromPlan(weekPlan, new Date('2026-07-21T12:00:00'))
+    const short = applyWorkoutVersion(standard, 'short')
+    expect(short.estimatedMinutes).toBeLessThan(standard.estimatedMinutes)
+    expect(short.exercises.length).toBeLessThan(standard.exercises.length)
+    expect(standard.estimatedMinutes).toBe(60)
   })
 })

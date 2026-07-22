@@ -1,4 +1,4 @@
-import type { PlanDay, PlanModification, Workout, WorkoutExercise } from './types'
+import type { PlanDay, PlanModification, Workout, WorkoutExercise, WorkoutVersion } from './types'
 import { localDateKey, mondayFirstWeekday } from './date'
 
 function buildSets(id: string, target: string) {
@@ -54,6 +54,15 @@ export function applyModificationToWorkout(
       .filter((change) => !change.removed && change.updated)
       .map((change) => [change.original, change.updated]),
   )
+  const modifiedExercises = workout.exercises
+    .filter((exercise) => !removed.has(exercise.name))
+    .map((exercise) => ({
+      ...exercise,
+      name: replacements.get(exercise.name) ?? exercise.name,
+    }))
+  const essentials = modifiedExercises.filter(
+    (exercise) => exercise.section === 'warmup' || exercise.section === 'primary',
+  )
   return {
     ...workout,
     estimatedMinutes:
@@ -61,12 +70,28 @@ export function applyModificationToWorkout(
         ? Math.max(10, Math.round(workout.estimatedMinutes * 0.5))
         : workout.estimatedMinutes,
     intensity: modification.strategy === 'easier' ? 'light' : workout.intensity,
-    exercises: workout.exercises
-      .filter((exercise) => !removed.has(exercise.name))
-      .map((exercise) => ({
-        ...exercise,
-        name: replacements.get(exercise.name) ?? exercise.name,
-      })),
+    exercises:
+      modification.strategy === 'shorter'
+        ? essentials.length
+          ? essentials
+          : modifiedExercises.slice(0, Math.max(1, Math.ceil(modifiedExercises.length / 2)))
+        : modifiedExercises,
+  }
+}
+
+export function applyWorkoutVersion(workout: Workout, version: WorkoutVersion): Workout {
+  if (version === 'standard') return workout
+  if (version === 'light') return { ...workout, intensity: 'light' }
+  const essentials = workout.exercises.filter(
+    (exercise) => exercise.section === 'warmup' || exercise.section === 'primary',
+  )
+  return {
+    ...workout,
+    estimatedMinutes: Math.max(10, Math.round(workout.estimatedMinutes * 0.5)),
+    exercises:
+      essentials.length
+        ? essentials
+        : workout.exercises.slice(0, Math.max(1, Math.ceil(workout.exercises.length / 2))),
   }
 }
 

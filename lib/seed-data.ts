@@ -445,7 +445,6 @@ export const skills: SkillDefinition[] = [
     recommendedFrequency: '2-3x / week',
     currentWeeklyFrequency: 3,
     equipment: ['Parallettes', 'Floor'],
-    guideUrl: 'https://example.com/guides/planche',
     stages: [
       { id: 'pl-1', name: 'Wrist & straight-arm prep', order: 1, description: 'Build wrist tolerance and locked-elbow strength.', exercises: ['Wrist push-ups', 'Scap protractions'], commonFaults: ['Bent elbows'], timelineRange: 'Ongoing' },
       { id: 'pl-2', name: 'Frog stand', order: 2, description: 'Balance on bent arms.', exercises: ['Frog stand holds'], commonFaults: ['Resting knees on elbows'], timelineRange: '2-4 weeks' },
@@ -470,7 +469,6 @@ export const skills: SkillDefinition[] = [
     recommendedFrequency: '3-5x / week (short)',
     currentWeeklyFrequency: 3,
     equipment: ['Floor', 'Wall'],
-    guideUrl: 'https://example.com/guides/handstand',
     stages: [
       { id: 'hs-1', name: 'Chest-to-wall line', order: 1, description: 'Build a straight line facing the wall.', exercises: ['Chest-to-wall holds'], commonFaults: ['Arching'], timelineRange: 'Ongoing' },
       { id: 'hs-2', name: 'Toe & heel pulls', order: 2, description: 'Find balance off the wall.', exercises: ['Toe pulls', 'Heel pulls'], commonFaults: ['Falling early'], timelineRange: '2-4 weeks' },
@@ -494,7 +492,6 @@ export const skills: SkillDefinition[] = [
     recommendedFrequency: '2x / week',
     currentWeeklyFrequency: 2,
     equipment: ['Floor', 'Box', 'Wall'],
-    guideUrl: 'https://example.com/guides/press',
     stages: [
       { id: 'pr-1', name: 'Pike compression', order: 1, description: 'Active pike lift strength.', exercises: ['Seated pike lifts'], commonFaults: ['Rounding back'], timelineRange: 'Current' },
       { id: 'pr-2', name: 'Straddle compression', order: 2, description: 'Straddle lift strength.', exercises: ['Straddle lifts'], commonFaults: ['Bent knees'], timelineRange: 'Current' },
@@ -518,7 +515,6 @@ export const skills: SkillDefinition[] = [
     recommendedFrequency: '2-3x / week',
     currentWeeklyFrequency: 2,
     equipment: ['Pool'],
-    guideUrl: 'https://example.com/guides/swimming',
     stages: [
       { id: 'sw-1', name: 'Lesson consistency', order: 1, description: 'Attend Tue/Thu lessons.', exercises: ['Lessons'], commonFaults: ['Skipping'], timelineRange: 'Current' },
       { id: 'sw-2', name: 'Freestyle efficiency', order: 2, description: 'Smooth, efficient stroke.', exercises: ['Catch drills'], commonFaults: ['Crossover'], timelineRange: 'Current' },
@@ -527,6 +523,24 @@ export const skills: SkillDefinition[] = [
       { id: 'sw-5', name: 'Breaststroke', order: 5, description: 'Add breaststroke.', exercises: ['Breaststroke drills'], commonFaults: ['Timing'], timelineRange: '3-4 months' },
       { id: 'sw-6', name: 'Butterfly intro', order: 6, description: 'Introduce butterfly.', exercises: ['Fly drills'], commonFaults: ['Timing'], timelineRange: '4-6 months' },
       { id: 'sw-7', name: 'Endurance & pacing', order: 7, description: 'Build continuous distance.', exercises: ['Interval sets'], commonFaults: ['Going out too fast'], timelineRange: 'Ongoing' },
+    ],
+  },
+  {
+    id: 'skill-physique',
+    name: 'Physique Support',
+    priority: 'primary',
+    active: true,
+    category: 'Strength & hypertrophy',
+    prerequisites: ['Consistent gym access or dumbbells'],
+    supportingQualities: ['Chest fullness', 'Side and rear delts', 'Lats', 'Upper back', 'Arms'],
+    recommendedFrequency: '1-2x / week',
+    currentWeeklyFrequency: 1,
+    equipment: ['Bench', 'Dumbbells', 'Cables', 'Pull-up station'],
+    stages: [
+      { id: 'ph-1', name: 'Maintenance baseline', order: 1, description: 'Keep one high-quality weekly upper-body session.', exercises: ['Bench press', 'Weighted pull-ups', 'Delt and arm work'], commonFaults: ['Dropping pressing entirely'], timelineRange: 'Ongoing' },
+      { id: 'ph-2', name: 'Consistent weekly volume', order: 2, description: 'Cover chest, back, delts, and arms without displacing skills.', exercises: ['Upper-body size and strength'], commonFaults: ['Adding junk volume'], timelineRange: 'Current' },
+      { id: 'ph-3', name: 'Double progression', order: 3, description: 'Advance repetitions before adding load.', exercises: ['Rep-range progression'], commonFaults: ['Changing load and reps together'], timelineRange: 'Ongoing' },
+      { id: 'ph-4', name: 'Slow lean gain', order: 4, description: 'Add muscle gradually while keeping planche leverage manageable.', exercises: ['Bodyweight and performance review'], commonFaults: ['Gaining too quickly'], timelineRange: 'Long-term' },
     ],
   },
   // Optional / inactive skills
@@ -564,7 +578,6 @@ function optionalSkill(
     currentWeeklyFrequency: 0,
     equipment,
     interference,
-    guideUrl: 'https://example.com/guides/' + id,
     stages: [
       { id: id + '-s1', name: 'Foundation', order: 1, description: 'Build prerequisites.', exercises: [], commonFaults: [], timelineRange: 'Varies' },
       { id: id + '-s2', name: 'Progression', order: 2, description: 'Work the main progression.', exercises: [], commonFaults: [], timelineRange: 'Varies' },
@@ -608,6 +621,13 @@ export const skillStates: UserSkillState[] = [
     bestResult: '2-3 sessions/week, freestyle developing',
     nextMilestone: 'Consistent bilateral breathing',
     history: [{ date: '2026-06-11', note: 'Freestyle technique lesson.' }],
+  },
+  {
+    skillId: 'skill-physique',
+    currentStageId: 'ph-2',
+    bestResult: 'Bench 185 × 8 across 3 sets; weighted pull-up +55 × 6–8',
+    nextMilestone: 'Maintain weekly chest/back/delt/arm coverage while skills progress',
+    history: [{ date: '2026-06-11', note: 'Upper-body size and strength session completed.' }],
   },
 ]
 
@@ -675,6 +695,22 @@ export const flexibilityRoutines: FlexibilityRoutine[] = [
     itemIds: ['m4', 'm3', 'm1'],
   },
   {
+    id: 'daily-standard',
+    name: 'Daily Standard Routine',
+    duration: '15 min',
+    description: 'A balanced daily reset for wrists, shoulders, hips, and compression.',
+    focusAreas: ['Wrists', 'Shoulder flexion', 'Hip flexors', 'Pike'],
+    itemIds: ['m4', 'm3', 'm6', 'm1', 'm8'],
+  },
+  {
+    id: 'full-flexibility',
+    name: 'Full Flexibility Routine',
+    duration: '25 min',
+    description: 'A complete session for pike, pancake, shoulders, hips, and thoracic range.',
+    focusAreas: ['Pike', 'Pancake', 'Shoulder flexion', 'Hip flexors', 'Thoracic'],
+    itemIds: ['m1', 'm2', 'm3', 'm6', 'm7', 'm8'],
+  },
+  {
     id: 'press-handstand',
     name: 'Press-to-Handstand Routine',
     duration: '25 min',
@@ -717,13 +753,13 @@ export const flexibilityRoutines: FlexibilityRoutine[] = [
 ]
 
 export const resources: GuideResource[] = [
-  { id: 'g1', title: 'Open Tuck to Advanced Tuck Planche', skill: 'Planche', stage: 'Open tuck', contentType: 'video', source: 'Placeholder Coach', url: 'https://example.com/planche-progression', summary: 'Progression cues from open to advanced tuck.', relevance: 'Matches current planche stage.', saved: true, completed: false, bodyArea: 'Shoulders', equipment: 'Parallettes', durationMin: 14 },
-  { id: 'g2', title: 'Consistent Handstand Kick-ups', skill: 'Handstand', stage: 'Kick-up consistency', contentType: 'video', source: 'Placeholder Coach', url: 'https://example.com/kickups', summary: 'Drills to improve entry success rate.', relevance: 'Directly targets your kick-up limiter.', saved: true, completed: false, bodyArea: 'Full body', equipment: 'Floor', durationMin: 10 },
-  { id: 'g3', title: 'Press-to-Handstand Compression Blueprint', skill: 'Press-to-Handstand', stage: 'Compression', contentType: 'article', source: 'Placeholder Source', url: 'https://example.com/press-compression', summary: 'Building active compression for the press.', relevance: 'Long-term press goal foundation.', saved: false, completed: false, bodyArea: 'Hips', equipment: 'Floor', durationMin: 8 },
-  { id: 'g4', title: 'Pancake & Pike Mobility Routine', skill: 'Mobility', stage: 'Pike/pancake', contentType: 'drill', source: 'Placeholder Source', url: 'https://example.com/pancake', summary: 'Daily routine for straddle and pike range.', relevance: 'Supports press and planche.', saved: false, completed: false, bodyArea: 'Hips', equipment: 'Floor', durationMin: 12 },
-  { id: 'g5', title: 'Bulletproof Wrists for Hand Balancing', skill: 'Wrist prep', stage: 'Prep', contentType: 'video', source: 'Placeholder Source', url: 'https://example.com/wrists', summary: 'Wrist conditioning to prevent overuse.', relevance: 'Relevant to forearm monitoring.', saved: true, completed: true, bodyArea: 'Wrists', equipment: 'Floor', durationMin: 9 },
-  { id: 'g6', title: 'Freestyle Technique Fundamentals', skill: 'Swimming', stage: 'Freestyle efficiency', contentType: 'video', source: 'Placeholder Source', url: 'https://example.com/freestyle', summary: 'Catch, body position, and rotation.', relevance: 'Supports swim lessons.', saved: false, completed: false, bodyArea: 'Full body', equipment: 'Pool', durationMin: 16 },
-  { id: 'g7', title: 'Hypertrophy for Calisthenics Athletes', skill: 'Hypertrophy', stage: 'Size', contentType: 'article', source: 'Placeholder Source', url: 'https://example.com/hypertrophy', summary: 'Adding size without hurting skill work.', relevance: 'Supports physique goals.', saved: true, completed: false, bodyArea: 'Full body', equipment: 'Dumbbells', durationMin: 11 },
+  { id: 'g1', title: 'Open Tuck to Advanced Tuck Planche', skill: 'Planche', stage: 'Open tuck', contentType: 'program', source: 'Daniel Training OS', url: '', summary: 'Progression cues from open to advanced tuck.', relevance: 'Matches current planche stage.', saved: true, completed: false, bodyArea: 'Shoulders', equipment: 'Parallettes', durationMin: 14 },
+  { id: 'g2', title: 'Consistent Handstand Kick-ups', skill: 'Handstand', stage: 'Kick-up consistency', contentType: 'drill', source: 'Daniel Training OS', url: '', summary: 'Drills to improve entry success rate.', relevance: 'Directly targets your kick-up limiter.', saved: true, completed: false, bodyArea: 'Full body', equipment: 'Floor', durationMin: 10 },
+  { id: 'g3', title: 'Press-to-Handstand Compression Blueprint', skill: 'Press-to-Handstand', stage: 'Compression', contentType: 'program', source: 'Daniel Training OS', url: '', summary: 'Building active compression for the press.', relevance: 'Long-term press goal foundation.', saved: false, completed: false, bodyArea: 'Hips', equipment: 'Floor', durationMin: 8 },
+  { id: 'g4', title: 'Pancake & Pike Mobility Routine', skill: 'Mobility', stage: 'Pike/pancake', contentType: 'drill', source: 'Daniel Training OS', url: '', summary: 'Daily routine for straddle and pike range.', relevance: 'Supports press and planche.', saved: false, completed: false, bodyArea: 'Hips', equipment: 'Floor', durationMin: 12 },
+  { id: 'g5', title: 'Wrist Preparation for Hand Balancing', skill: 'Wrist prep', stage: 'Prep', contentType: 'drill', source: 'Daniel Training OS', url: '', summary: 'Progressive wrist preparation without training through pain.', relevance: 'Relevant to forearm monitoring.', saved: true, completed: true, bodyArea: 'Wrists', equipment: 'Floor', durationMin: 9 },
+  { id: 'g6', title: 'Freestyle Technique Fundamentals', skill: 'Swimming', stage: 'Freestyle efficiency', contentType: 'drill', source: 'Daniel Training OS', url: '', summary: 'Catch, body position, and rotation.', relevance: 'Supports swim lessons.', saved: false, completed: false, bodyArea: 'Full body', equipment: 'Pool', durationMin: 16 },
+  { id: 'g7', title: 'Hypertrophy Support for Calisthenics', skill: 'Hypertrophy', stage: 'Size', contentType: 'program', source: 'Daniel Training OS', url: '', summary: 'Adding size gradually without displacing primary skill work.', relevance: 'Supports physique goals.', saved: true, completed: false, bodyArea: 'Full body', equipment: 'Dumbbells', durationMin: 11 },
 ]
 
 export const coachConversation: CoachConversation = {

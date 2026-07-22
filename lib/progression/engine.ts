@@ -197,10 +197,20 @@ export function evaluateRepProgression(
     }
   }
 
+  const recentMinimums = history
+    .slice(-4)
+    .map((item) => (item.reps.length ? Math.min(...item.reps) : 0))
+  const stalled =
+    result.form !== 'poor' &&
+    recentMinimums.length >= 4 &&
+    Math.max(...recentMinimums) - Math.min(...recentMinimums) < 1
+
   return {
-    status: result.form === 'poor' ? 'stable' : 'stalled',
+    status: stalled ? 'stalled' : 'stable',
     nextTarget: base,
-    reason: 'Repeat the current load and bottom-of-range target until all working sets are clean.',
+    reason: stalled
+      ? 'Four relevant sessions show no repetition improvement; review load, volume, and recovery.'
+      : 'Repeat the current load and bottom-of-range target until all working sets are clean.',
     progressionSuggested: false,
   }
 }
@@ -261,10 +271,17 @@ export function evaluateHandstandProgression(
   }
 
   if (rate < config.targetSuccessRate) {
+    const recentRates = history
+      .slice(-4)
+      .map((item) => (item.attempts > 0 ? item.successfulEntries / item.attempts : 0))
+    const stalled =
+      recentRates.length >= 4 && Math.max(...recentRates) - Math.min(...recentRates) < 0.05
     return {
-      status: 'stable',
+      status: stalled ? 'stalled' : 'stable',
       nextTarget: { ...base, focus: 'entries' },
-      reason: `Entry success was ${Math.round(rate * 100)}%; prioritize repeatable kick-ups even if the best hold is already strong.`,
+      reason: stalled
+        ? 'Four relevant sessions show no meaningful entry-rate improvement; simplify the entry drill and review fatigue.'
+        : `Entry success was ${Math.round(rate * 100)}%; prioritize repeatable kick-ups even if the best hold is already strong.`,
       progressionSuggested: false,
     }
   }

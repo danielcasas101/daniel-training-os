@@ -1,6 +1,6 @@
 // Core domain types for Daniel Training OS.
-// These mirror the planned Supabase tables so repository implementations can
-// swap mock data for real persistence without touching UI components.
+// These mirror the local store and Supabase records so persistence can change
+// without coupling domain logic to page components.
 
 export type ID = string
 
@@ -317,6 +317,7 @@ export interface ExerciseInstruction {
   easier: string
   harder: string
   feelsLike: string
+  shouldNotFeelLike?: string
   discomfortWarning?: string
   whyInPlan: string
   guideUrl?: string

@@ -63,6 +63,7 @@ export type Database = {
           original_plan: Json
           modified_plan: Json
           modification: Json | null
+          version: string
           created_at: string
           updated_at: string
         },
@@ -73,6 +74,7 @@ export type Database = {
           original_plan: Json
           modified_plan: Json
           modification?: Json | null
+          version?: string
         }
       >
       workouts: Table<
@@ -98,12 +100,26 @@ export type Database = {
         }
       >
       progression_events: Table<OwnedPayloadRow & { event_date: string; exercise_id: string }>
+      skill_milestones: Table<{
+        id: string
+        user_id: string
+        milestone_date: string
+        note: string
+        created_at: string
+      }>
       flexibility_sessions: Table<OwnedPayloadRow & { session_date: string }>
       bodyweight_logs: Table<{
         id: string
         user_id: string
         log_date: string
         weight_lb: number
+        created_at: string
+      }>
+      body_notes: Table<{
+        id: string
+        user_id: string
+        note_month: string
+        note: string
         created_at: string
       }>
       nutrition_checkins: Table<OwnedPayloadRow & { checkin_date: string }>

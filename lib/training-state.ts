@@ -10,9 +10,10 @@ import type {
   Profile,
   UserPreferences,
   Workout,
+  WorkoutVersion,
 } from './types'
 import type { ProgressionStatus } from './progression'
-import { bodyweightLogs, equipment, injuries, preferences, profile, resources, weekPlan } from './seed-data'
+import { bodyweightLogs, equipment, injuries, preferences, profile, resources, skills, weekPlan } from './seed-data'
 
 export interface ProgressionUpdate {
   id: string
@@ -40,6 +41,7 @@ export interface DailyPlanRecord {
   modification?: PlanModification
   actual?: Workout
   completion?: SessionCompletion
+  version: WorkoutVersion
 }
 
 export interface WeekOverrideRecord {
@@ -57,6 +59,18 @@ export interface FlexibilitySessionRecord {
   note?: string
 }
 
+export interface MilestoneRecord {
+  id: string
+  date: string
+  note: string
+}
+
+export interface BodyNoteRecord {
+  id: string
+  month: string
+  note: string
+}
+
 export interface TrainingState {
   schemaVersion: 1
   profile: Profile
@@ -64,6 +78,7 @@ export interface TrainingState {
   equipment: Equipment[]
   injuries: InjuryHistory[]
   resources: GuideResource[]
+  activeSkillIds: string[]
   recurringPlan: PlanDay[]
   weekOverrides: Record<string, WeekOverrideRecord>
   dailyPlans: Record<string, DailyPlanRecord>
@@ -75,8 +90,10 @@ export interface TrainingState {
     progressionUpdates: ProgressionUpdate[]
   }>
   progressionUpdates: ProgressionUpdate[]
+  milestones: MilestoneRecord[]
   flexibilitySessions: FlexibilitySessionRecord[]
   bodyweight: BodyweightLog[]
+  bodyNotes: BodyNoteRecord[]
   nutritionCheckins: NutritionCheckin[]
 }
 
@@ -87,12 +104,15 @@ export const initialTrainingState: TrainingState = {
   equipment,
   injuries,
   resources,
+  activeSkillIds: skills.filter((skill) => skill.active).map((skill) => skill.id),
   recurringPlan: weekPlan,
   weekOverrides: {},
   dailyPlans: {},
   completedWorkouts: [],
   progressionUpdates: [],
+  milestones: [],
   flexibilitySessions: [],
   bodyweight: bodyweightLogs,
+  bodyNotes: [],
   nutritionCheckins: [],
 }

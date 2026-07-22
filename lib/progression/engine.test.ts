@@ -98,6 +98,22 @@ describe('progression engine', () => {
     expect(decision.nextTarget).toMatchObject({ load: 60, reps: 6 })
   })
 
+  it('does not call one missed rep session a stall', () => {
+    const decision = evaluateRepProgression(
+      {
+        variation: 'Weighted pull-up',
+        sets: 3,
+        minimumReps: 6,
+        maximumReps: 8,
+        load: 55,
+        loadIncrement: 5,
+        minimumWeeklyExposures: 1,
+      },
+      { date: '2026-07-21', reps: [6, 5, 5], load: 55, ...clean },
+    )
+    expect(decision.status).toBe('stable')
+  })
+
   it('prioritizes handstand entries when holds are strong but success is weak', () => {
     const decision = evaluateHandstandProgression(
       {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type {
   Workout,
   WorkoutExercise,
@@ -19,7 +19,7 @@ import { Clock, Flame, Play, PartyPopper, SlidersHorizontal, Target } from 'luci
 import { useTrainingState } from '@/components/training-state-provider'
 import { trainingStore } from '@/lib/training-store'
 import { createProgressionUpdate } from '@/lib/progression/catalog'
-import { applyModificationToPlan, applyModificationToWorkout } from '@/lib/planning'
+import { applyModificationToPlan, applyModificationToWorkout, applyWorkoutVersion, workoutFromPlan } from '@/lib/planning'
 import { mondayFirstWeekday, startOfWeekKey } from '@/lib/date'
 
 const SECTION_ORDER = [
@@ -46,20 +46,36 @@ export function TodayClient({
   blockName: string
 }) {
   const trainingState = useTrainingState()
+  const calendarDate = new Date(`${initialWorkout.date}T12:00:00`)
+  const currentWeekPlan =
+    trainingState.weekOverrides[startOfWeekKey(calendarDate)]?.plan ??
+    trainingState.recurringPlan
+  const generatedWorkout = workoutFromPlan(currentWeekPlan, calendarDate)
+  const workoutSignature = (candidate: Workout) =>
+    JSON.stringify({
+      title: candidate.title,
+      minutes: candidate.estimatedMinutes,
+      intensity: candidate.intensity,
+      exercises: candidate.exercises.map((exercise) => [exercise.name, exercise.target]),
+    })
+  const initialSignature = workoutSignature(initialWorkout)
+  const generatedSignature = workoutSignature(generatedWorkout)
+  const baseWorkout = initialSignature === generatedSignature ? initialWorkout : generatedWorkout
   const dailyRecord = trainingState.dailyPlans[initialWorkout.date]
-  const workout = dailyRecord?.working ?? initialWorkout
+  const workout = dailyRecord?.working ?? baseWorkout
   const [compact, setCompact] = useState(false)
   const [detailed, setDetailed] = useState(false)
   const [modifyOpen, setModifyOpen] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
   const modification = dailyRecord?.modification ?? null
   const completion = dailyRecord?.completion ?? null
+  const version = dailyRecord?.version ?? 'standard'
 
   const setWorkout = (
     updater: Workout | ((current: Workout) => Workout),
   ) => {
     const next = typeof updater === 'function' ? updater(workout) : updater
-    trainingStore.updateWorkingWorkout(initialWorkout.date, initialWorkout, next)
+    trainingStore.updateWorkingWorkout(baseWorkout.date, baseWorkout, next)
   }
 
   const showFlash = (msg: string) => {
@@ -85,22 +101,16 @@ export function TodayClient({
       return { ...w, exercises }
     })
 
-  // Items removed by a "today only" modification (e.g. no pool -> remove swim)
-  const removedNames = useMemo(() => {
-    if (!modification) return new Set<string>()
-    return new Set(
-      modification.changes.filter((c) => c.removed).map((c) => c.original),
-    )
-  }, [modification])
+  const displayedWorkout = applyWorkoutVersion(
+    applyModificationToWorkout(workout, modification ?? undefined),
+    version,
+  )
+  const visibleExercises = displayedWorkout.exercises
 
-  const visibleExercises = workout.exercises.filter((e) => !removedNames.has(e.name))
-
-  const grouped = useMemo(() => {
-    return SECTION_ORDER.map((section) => ({
-      section,
-      items: visibleExercises.filter((e) => e.section === section),
-    })).filter((g) => g.items.length > 0)
-  }, [visibleExercises])
+  const grouped = SECTION_ORDER.map((section) => ({
+    section,
+    items: visibleExercises.filter((e) => e.section === section),
+  })).filter((group) => group.items.length > 0)
 
   const completedCount = visibleExercises.filter((e) => e.done).length
   const allDone = completedCount === visibleExercises.length && visibleExercises.length > 0
@@ -108,12 +118,8 @@ export function TodayClient({
     ? Math.round((completedCount / visibleExercises.length) * 100)
     : 0
 
-  const shorter = modification?.strategy === 'shorter'
-  const easier = modification?.strategy === 'easier'
-  const minutes = shorter
-    ? Math.round(workout.estimatedMinutes * 0.5)
-    : workout.estimatedMinutes
-  const intensity = easier ? 'light' : workout.intensity
+  const minutes = displayedWorkout.estimatedMinutes
+  const intensity = displayedWorkout.intensity
 
   if (compact) {
     return (
@@ -187,6 +193,31 @@ export function TodayClient({
             <SlidersHorizontal className="size-4" />
             Modify today
           </Button>
+          <div className="flex w-full gap-1 rounded-lg bg-muted/60 p-1 sm:ml-auto sm:w-auto">
+            {(['standard', 'short', 'light'] as const).map((version) => {
+              const active = version === (dailyRecord?.version ?? 'standard')
+              return (
+                <button
+                  key={version}
+                  type="button"
+                  onClick={() => {
+                    trainingStore.setDailyVersion(
+                      workout.date,
+                      dailyRecord?.original ?? baseWorkout,
+                      workout,
+                      version,
+                    )
+                  }}
+                  className={cn(
+                    'rounded-md px-2.5 py-1.5 text-xs font-medium capitalize transition-colors',
+                    active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground',
+                  )}
+                >
+                  {version}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </section>
 
@@ -257,7 +288,7 @@ export function TodayClient({
       <CompletionCard
         saved={!!completion}
         onSave={(c) => {
-          const effective = applyModificationToWorkout(workout, modification ?? undefined)
+          const effective = displayedWorkout
           const updates = effective.exercises
             .map((exercise) =>
               createProgressionUpdate(
@@ -268,7 +299,7 @@ export function TodayClient({
               ),
             )
             .filter((update): update is NonNullable<typeof update> => update != null)
-          trainingStore.completeWorkout(initialWorkout, effective, c, updates)
+          trainingStore.completeWorkout(baseWorkout, effective, c, updates)
           showFlash(
             c.outcome === 'skipped'
               ? 'Logged as skipped'
@@ -292,15 +323,20 @@ export function TodayClient({
         onApply={(result) => {
           trainingStore.saveModification(
             workout.date,
-            dailyRecord?.original ?? initialWorkout,
+            dailyRecord?.original ?? baseWorkout,
             workout,
             result,
           )
           if (result.scope !== 'today') {
             const date = new Date(`${workout.date}T12:00:00`)
             const weekday = mondayFirstWeekday(date)
+            const planToChange =
+              result.scope === 'this_week'
+                ? trainingState.weekOverrides[startOfWeekKey(date)]?.plan ??
+                  trainingState.recurringPlan
+                : trainingState.recurringPlan
             const updatedPlan = applyModificationToPlan(
-              trainingState.recurringPlan,
+              planToChange,
               weekday,
               result,
             )

@@ -62,15 +62,26 @@ export function ModifyTodaySheet({
   const [reason, setReason] = useState<ModificationReason | null>(null)
   const [strategy, setStrategy] = useState<ModificationStrategy | null>(null)
   const [note, setNote] = useState('')
+  const [manualRemoved, setManualRemoved] = useState<string[]>([])
 
   const reset = () => {
     setStep(1)
     setReason(null)
     setStrategy(null)
     setNote('')
+    setManualRemoved([])
   }
 
-  const changes = reason && strategy ? computeChanges(workout, reason, strategy) : []
+  const automaticChanges = reason && strategy ? computeChanges(workout, reason, strategy) : []
+  const changes =
+    strategy === 'manual'
+      ? manualRemoved.map((name) => ({
+          original: name,
+          updated: '',
+          removed: true,
+          reason: 'Removed manually for this plan scope.',
+        }))
+      : automaticChanges
 
   const apply = (scope: ModificationScope) => {
     if (!reason || !strategy) return
@@ -152,6 +163,38 @@ export function ModifyTodaySheet({
           {step === 3 && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
+                {strategy === 'manual' && (
+                  <div className="mb-2 flex flex-col gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Tap any exercise to remove it from the modified plan.
+                    </p>
+                    {workout.exercises.map((exercise) => {
+                      const removed = manualRemoved.includes(exercise.name)
+                      return (
+                        <button
+                          key={exercise.id}
+                          type="button"
+                          onClick={() =>
+                            setManualRemoved((current) =>
+                              removed
+                                ? current.filter((name) => name !== exercise.name)
+                                : [...current, exercise.name],
+                            )
+                          }
+                          className={cn(
+                            'flex items-center justify-between rounded-lg border p-3 text-left text-sm',
+                            removed
+                              ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                              : 'border-border bg-card',
+                          )}
+                        >
+                          <span>{exercise.name}</span>
+                          <span className="text-xs">{removed ? 'Removed' : 'Keep'}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
                 {changes.length === 0 ? (
                   <p className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
                     No automatic changes needed. Your focus stays the same — adjust manually below if you like.

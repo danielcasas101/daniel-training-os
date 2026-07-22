@@ -35,6 +35,7 @@ type DayAction = 'skip' | 'shorten' | 'easier' | 'replace'
 interface WeekState {
   order: number[] // indexes into base plan
   actions: Record<string, DayAction | undefined>
+  replacements: Record<string, string | undefined>
 }
 
 // The 5 weekly metrics requested — counts of session types in the template.
@@ -61,15 +62,18 @@ export function PlanClient({
     ? trainingState.recurringPlan
     : initialPlan
   const sourcePlan = trainingState.weekOverrides[weekStart]?.plan ?? templatePlan
+  const hasSavedWeekOverride = Boolean(trainingState.weekOverrides[weekStart])
   const [week, setWeek] = useState<WeekState>({
     order: sourcePlan.map((_, i) => i),
     actions: {},
+    replacements: {},
   })
 
   const weekDays = week.order.map((i) => sourcePlan[i])
   const dirty =
     week.order.some((v, i) => v !== i) ||
-    Object.values(week.actions).some(Boolean)
+    Object.values(week.actions).some(Boolean) ||
+    Object.values(week.replacements).some(Boolean)
 
   const move = (orderIdx: number, dir: -1 | 1) => {
     const target = orderIdx + dir
@@ -90,8 +94,15 @@ export function PlanClient({
       },
     }))
 
+  const setReplacement = (dayId: string, replacement: string) =>
+    setWeek((current) => ({
+      ...current,
+      actions: { ...current.actions, [dayId]: 'replace' },
+      replacements: { ...current.replacements, [dayId]: replacement },
+    }))
+
   const restore = () =>
-    setWeek({ order: sourcePlan.map((_, i) => i), actions: {} })
+    setWeek({ order: sourcePlan.map((_, i) => i), actions: {}, replacements: {} })
 
   const effectiveWeek = weekDays.map((day, index) => {
     const action = week.actions[day.id]
@@ -108,10 +119,10 @@ export function PlanClient({
     }
     if (action === 'easier') return { ...scheduled, intensity: 'light' as const }
     if (action === 'replace') {
+      const replacement = week.replacements[day.id] ?? 'Flexible replacement session'
       return {
         ...scheduled,
-        title: 'Flexible replacement session',
-        primaryFocus: 'Recovery, mobility, or light skill practice',
+        ...replacementPlan(replacement, day.id),
         intensity: 'light' as const,
       }
     }
@@ -120,7 +131,12 @@ export function PlanClient({
 
   const saveWeek = () => {
     trainingStore.saveWeekOverride(weekStart, effectiveWeek)
-    setWeek({ order: effectiveWeek.map((_, index) => index), actions: {} })
+    setWeek({ order: effectiveWeek.map((_, index) => index), actions: {}, replacements: {} })
+  }
+
+  const restoreTemplate = () => {
+    trainingStore.clearWeekOverride(weekStart)
+    setWeek({ order: templatePlan.map((_, index) => index), actions: {}, replacements: {} })
   }
 
   const metrics = useMemo(
@@ -134,6 +150,20 @@ export function PlanClient({
 
   const today =
     sourcePlan.find((d) => d.weekday === todayWeekday) ?? sourcePlan[0]
+  const changeHistory = [
+    ...Object.values(trainingState.weekOverrides).map((override) => ({
+      key: `week-${override.weekStart}`,
+      date: override.changedAt.slice(0, 10),
+      label: `Updated week of ${override.weekStart}`,
+    })),
+    ...Object.values(trainingState.dailyPlans)
+      .filter((record) => record.modification)
+      .map((record) => ({
+        key: `day-${record.date}`,
+        date: record.date,
+        label: `Modified ${record.date} · ${record.modification?.scope.replace('_', ' ')}`,
+      })),
+  ].sort((a, b) => b.date.localeCompare(a.date))
 
   return (
     <div className="flex flex-col gap-5">
@@ -194,16 +224,22 @@ export function PlanClient({
             <p className="text-sm text-muted-foreground">
               Temporary changes for this week only.
             </p>
-            {dirty && (
+            {(dirty || hasSavedWeekOverride) && (
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={restore}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={hasSavedWeekOverride && !dirty ? restoreTemplate : restore}
+                >
                   <RotateCcw className="size-3.5" />
-                  Restore
+                  {hasSavedWeekOverride && !dirty ? 'Restore template' : 'Undo edits'}
                 </Button>
-                <Button size="sm" onClick={saveWeek}>
-                  <Save className="size-3.5" />
-                  Save week
-                </Button>
+                {dirty && (
+                  <Button size="sm" onClick={saveWeek}>
+                    <Save className="size-3.5" />
+                    Save week
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -218,6 +254,8 @@ export function PlanClient({
               isFirst={i === 0}
               isLast={i === weekDays.length - 1}
               onAction={(a) => setAction(day.id, a)}
+              replacement={week.replacements[day.id]}
+              onReplacement={(choice) => setReplacement(day.id, choice)}
             />
           ))}
         </TabsContent>
@@ -230,6 +268,29 @@ export function PlanClient({
           </p>
         </TabsContent>
       </Tabs>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Change history
+        </h2>
+        {changeHistory.length ? (
+          <div className="flex flex-col gap-2">
+            {changeHistory.slice(0, 8).map((entry) => (
+              <div
+                key={entry.key}
+                className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs"
+              >
+                <span>{entry.label}</span>
+                <span className="text-muted-foreground">{entry.date}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+            No saved changes yet. The recurring template remains untouched.
+          </p>
+        )}
+      </section>
     </div>
   )
 }
@@ -241,6 +302,60 @@ const ACTION_LABELS: Record<DayAction, string> = {
   replace: 'Replaced',
 }
 
+type ReplacementFields = Pick<
+  PlanDay,
+  'title' | 'primaryFocus' | 'estimatedMinutes' | 'swimStatus' | 'flexibilityEmphasis' | 'exercises'
+>
+
+function replacementPlan(choice: string, dayId: string): ReplacementFields {
+  const options: Record<string, ReplacementFields> = {
+    'Flexibility session': {
+      title: 'Flexibility session',
+      primaryFocus: 'Full-body mobility and active compression',
+      estimatedMinutes: 25,
+      swimStatus: 'none',
+      flexibilityEmphasis: 'Full routine',
+      exercises: [{ id: `${dayId}-flex`, name: 'Full Flexibility Routine', target: '25 min', section: 'flexibility', cue: 'Use controlled, pain-free range.' }],
+    },
+    'Light cardio / walk': {
+      title: 'Light cardio / walk',
+      primaryFocus: 'Easy aerobic recovery',
+      estimatedMinutes: 30,
+      swimStatus: 'none',
+      flexibilityEmphasis: 'Optional',
+      exercises: [{ id: `${dayId}-walk`, name: 'Easy walk', target: '20-30 min', section: 'warmup', cue: 'Keep the pace conversational.' }],
+    },
+    'Extra recovery': {
+      title: 'Extra recovery',
+      primaryFocus: 'Rest, circulation, and gentle mobility',
+      estimatedMinutes: 15,
+      swimStatus: 'none',
+      flexibilityEmphasis: 'Recovery',
+      exercises: [{ id: `${dayId}-recovery`, name: 'Recovery Routine', target: '15 min', section: 'flexibility', cue: 'Keep every position gentle.' }],
+    },
+    'Handstand practice only': {
+      title: 'Handstand practice only',
+      primaryFocus: 'Entry consistency and clean line',
+      estimatedMinutes: 25,
+      swimStatus: 'none',
+      flexibilityEmphasis: 'Wrists and shoulders',
+      exercises: [{ id: `${dayId}-handstand`, name: 'Freestanding kick-up practice', target: '10 attempts', section: 'primary', cue: 'Prioritize repeatable entries.' }],
+    },
+    'Gym physique session': {
+      title: 'Gym physique session',
+      primaryFocus: 'Chest, back, delts, and arms',
+      estimatedMinutes: 60,
+      swimStatus: 'none',
+      flexibilityEmphasis: 'Thoracic',
+      exercises: [
+        { id: `${dayId}-press`, name: 'Incline dumbbell press', target: '4 x 8-10', section: 'strength', cue: 'Controlled stretch and clean reps.' },
+        { id: `${dayId}-pull`, name: 'Weighted pull-ups', target: '4 x 6-8', section: 'strength', cue: 'Keep every rep controlled.' },
+      ],
+    },
+  }
+  return options[choice] ?? options['Extra recovery']
+}
+
 function DayCard({
   day,
   variant,
@@ -250,6 +365,8 @@ function DayCard({
   isFirst,
   isLast,
   onAction,
+  replacement,
+  onReplacement,
   defaultOpen,
 }: {
   day: PlanDay
@@ -260,6 +377,8 @@ function DayCard({
   isFirst?: boolean
   isLast?: boolean
   onAction?: (a: DayAction) => void
+  replacement?: string
+  onReplacement?: (choice: string) => void
   defaultOpen?: boolean
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -391,12 +510,15 @@ function DayCard({
                 <button
                   key={opt}
                   onClick={() => {
-                    onAction?.('replace')
+                    onReplacement?.(opt)
                     setSheetOpen(false)
                   }}
                   className="rounded-lg border border-border bg-card p-3 text-left text-sm transition-colors hover:border-primary/40"
                 >
                   {opt}
+                  {replacement === opt && (
+                    <span className="ml-2 text-xs text-primary">Selected</span>
+                  )}
                 </button>
               ),
             )}

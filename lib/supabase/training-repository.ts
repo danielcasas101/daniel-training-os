@@ -12,7 +12,7 @@ export async function loadTrainingState(
   client: SupabaseClient<Database>,
   userId: string,
 ): Promise<TrainingState | null> {
-  const [profile, template, weeks, days, workouts, progression, flexibility, bodyweight, nutrition, guides] =
+  const [profile, template, weeks, days, workouts, progression, milestones, flexibility, bodyweight, bodyNotes, nutrition, guides] =
     await Promise.all([
       client.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
       client.from('plan_templates').select('plan').eq('user_id', userId).maybeSingle(),
@@ -20,13 +20,15 @@ export async function loadTrainingState(
       client.from('daily_plans').select('*').eq('user_id', userId),
       client.from('workouts').select('*').eq('user_id', userId),
       client.from('progression_events').select('*').eq('user_id', userId),
+      client.from('skill_milestones').select('*').eq('user_id', userId),
       client.from('flexibility_sessions').select('*').eq('user_id', userId),
       client.from('bodyweight_logs').select('*').eq('user_id', userId),
+      client.from('body_notes').select('*').eq('user_id', userId),
       client.from('nutrition_checkins').select('*').eq('user_id', userId),
       client.from('guide_resources').select('*').eq('owner_id', userId),
     ])
 
-  const firstError = [profile, template, weeks, days, workouts, progression, flexibility, bodyweight, nutrition, guides]
+  const firstError = [profile, template, weeks, days, workouts, progression, milestones, flexibility, bodyweight, bodyNotes, nutrition, guides]
     .map((result) => result.error)
     .find(Boolean)
   if (firstError) throw firstError
@@ -50,6 +52,7 @@ export async function loadTrainingState(
         modification: row.modification
           ? value<TrainingState['dailyPlans'][string]['modification']>(row.modification)
           : undefined,
+        version: (row.version as TrainingState['dailyPlans'][string]['version']) ?? 'standard',
       },
     ]),
   ) as TrainingState['dailyPlans']
@@ -72,14 +75,17 @@ export async function loadTrainingState(
     }
   })
 
+  const savedPreferences = profile.data?.preferences
+    ? value<TrainingState['preferences'] & { activeSkillIds?: string[] }>(profile.data.preferences)
+    : undefined
+
   return {
     ...initialTrainingState,
     profile: profile.data?.profile
       ? value<TrainingState['profile']>(profile.data.profile)
       : initialTrainingState.profile,
-    preferences: profile.data?.preferences
-      ? value<TrainingState['preferences']>(profile.data.preferences)
-      : initialTrainingState.preferences,
+    preferences: savedPreferences ?? initialTrainingState.preferences,
+    activeSkillIds: savedPreferences?.activeSkillIds ?? initialTrainingState.activeSkillIds,
     equipment: profile.data?.equipment
       ? value<TrainingState['equipment']>(profile.data.equipment)
       : initialTrainingState.equipment,
@@ -100,10 +106,15 @@ export async function loadTrainingState(
       ]),
     ),
     dailyPlans,
-    completedWorkouts,
-    progressionUpdates: (progression.data ?? []).map((row) =>
-      value<TrainingState['progressionUpdates'][number]>(row.payload),
-    ),
+    completedWorkouts: completedWorkouts.sort((a, b) => b.date.localeCompare(a.date)),
+    progressionUpdates: (progression.data ?? [])
+      .map((row) => value<TrainingState['progressionUpdates'][number]>(row.payload))
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    milestones: (milestones.data ?? []).map((row) => ({
+      id: row.id,
+      date: row.milestone_date,
+      note: row.note,
+    })),
     flexibilitySessions: (flexibility.data ?? []).map((row) =>
       value<TrainingState['flexibilitySessions'][number]>(row.payload),
     ),
@@ -111,6 +122,11 @@ export async function loadTrainingState(
       id: row.id,
       date: row.log_date,
       weightLb: Number(row.weight_lb),
+    })),
+    bodyNotes: (bodyNotes.data ?? []).map((row) => ({
+      id: row.id,
+      month: row.note_month,
+      note: row.note,
     })),
     nutritionCheckins: (nutrition.data ?? []).map((row) =>
       value<TrainingState['nutritionCheckins'][number]>(row.payload),
@@ -126,12 +142,21 @@ export async function saveTrainingState(
   userId: string,
   state: TrainingState,
 ) {
+  // Week overrides are replaceable and may be restored to the recurring template.
+  // Clear only this authenticated user's rows before recreating the current set so
+  // deleted local overrides cannot reappear on the next device.
+  const { error: weekDeleteError } = await client
+    .from('week_plans')
+    .delete()
+    .eq('user_id', userId)
+  if (weekDeleteError) throw weekDeleteError
+
   const writes = [
     client.from('profiles').upsert({
       user_id: userId,
       display_name: state.profile.name,
       profile: json(state.profile),
-      preferences: json(state.preferences),
+      preferences: json({ ...state.preferences, activeSkillIds: state.activeSkillIds }),
       equipment: json(state.equipment),
       injury_context: json(state.injuries),
     }),
@@ -152,6 +177,7 @@ export async function saveTrainingState(
           original_plan: json(day.original),
           modified_plan: json(day.working),
           modification: day.modification ? json(day.modification) : null,
+          version: day.version,
         },
         { onConflict: 'user_id,plan_date' },
       ),
@@ -179,6 +205,14 @@ export async function saveTrainingState(
         payload: json(update),
       }),
     ),
+    ...state.milestones.map((milestone) =>
+      client.from('skill_milestones').upsert({
+        id: milestone.id,
+        user_id: userId,
+        milestone_date: milestone.date,
+        note: milestone.note,
+      }),
+    ),
     ...state.flexibilitySessions.map((session) =>
       client.from('flexibility_sessions').upsert({
         id: session.id,
@@ -196,6 +230,17 @@ export async function saveTrainingState(
           weight_lb: entry.weightLb,
         },
         { onConflict: 'user_id,log_date' },
+      ),
+    ),
+    ...state.bodyNotes.map((entry) =>
+      client.from('body_notes').upsert(
+        {
+          id: entry.id,
+          user_id: userId,
+          note_month: entry.month,
+          note: entry.note,
+        },
+        { onConflict: 'user_id,note_month' },
       ),
     ),
     ...state.nutritionCheckins.map((entry) =>
